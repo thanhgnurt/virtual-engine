@@ -1,76 +1,106 @@
-# React Virtual Engine
+# virtual-engine
 
-High-performance, zero-allocation rendering engine monorepo.
+Framework-agnostic computational core for virtual list rendering. Zero dependencies, zero allocations during scroll.
 
-## Project Structure
+[![npm](https://img.shields.io/npm/v/virtual-engine)](https://www.npmjs.com/package/virtual-engine)
+[![license](https://img.shields.io/npm/l/virtual-engine)](https://github.com/thanhgnurt/virtual-engine/blob/main/LICENSE)
 
-```
-├── packages/
-│   ├── core/                 # Core virtual engine library
-│   └── react/                # React bindings for the virtual engine
-├── examples/
-│   └── introduction/         # Demo application
-└── package.json              # Workspace root
-```
+## What it does
 
-## Development
+`virtual-engine` handles the math behind virtual scrolling — computing which rows are visible, managing slot-based pooling, and adapting buffer size based on scroll velocity. It produces index ranges; your framework renders them.
 
-### Install Dependencies
+## Features
 
-```bash
-npm install
-```
-
-### Run Demo App
-
-```bash
-npm run dev:intro
-```
-
-The demo app will be available at http://localhost:5173 (default Vite port) or as specified in the console.
-
-### Build All
-
-```bash
-npm run build
-```
-
-## Available Scripts
-
-- `npm run dev:intro` - Run the introduction demo app
-- `npm run dev:core` - Build core library in watch mode
-- `npm run dev:react` - Build react bindings in watch mode
-- `npm run build` - Build all workspaces
-- `npm run build:core` - Build the core library only
-- `npm run build:react` - Build the react library only
-- `npm run lint` - Run ESLint
-- `npm run format` - Format code with Prettier
-
-## Development Workflow
-
-1. **Development**: Use `npm run dev:intro` to run the demo app and test features.
-2. **Library Development**: Use `npm run dev:core` and `npm run dev:react` to watch and rebuild packages.
-3. **Build**: Use `npm run build` to build all packages.
+- Zero runtime dependencies
+- Pre-allocated `VirtualRange` object — no object creation per scroll frame
+- Velocity-aware dynamic buffering — extra rows during fast scroll, fewer when idle
+- Slot map via `Int32Array` — O(1) index-to-slot mapping with no allocations
+- DOM utility (`setTextNode`) for direct Text node manipulation without layout thrashing
 
 ## Installation
 
-The packages are published as `@virtual-engine/core` and `@virtual-engine/react` and can be installed via:
-
 ```bash
-npm install @virtual-engine/core @virtual-engine/react
+npm install virtual-engine
 ```
 
-## Commit Conventions
+No peer dependencies.
 
-This project follows these commit message conventions, which are **strictly enforced** via git hooks:
+## Usage
 
-- `feat`: A new feature (Corresponds to a MINOR version update).
-- `fix`: A bug fix (Corresponds to a PATCH version update).
-- `refactor`: A code change that neither fixes a bug nor adds a feature (e.g., Switching Store from `useMemo` to `useState`).
-- `perf`: A code change that improves performance (e.g., Adding Delayed Destruction for Strict Mode optimization).
-- `docs`: Documentation only changes.
-- `style`: Changes that do not affect the meaning of the code (white-space, formatting, missing semi-colons, etc).
-- `chore`: Changes to the build process or auxiliary tools and libraries such as documentation generation (e.g., updating `package.json`).
+```ts
+import { VirtualEngine } from "virtual-engine";
 
-> [!NOTE]
-> Use English for documentation and commit messages. For details, see [.agent/workflows/commit-conventions.md]
+const engine = new VirtualEngine({
+  totalCount: 100_000,
+  itemHeight: 40,
+  viewportHeight: 600,
+  buffer: 3,
+});
+
+// On scroll
+const range = engine.computeRange(scrollTop);
+// range.start, range.end — indices of rows to render
+
+// Slot mapping for a pool of reusable DOM nodes
+const poolSize = 20;
+const slotMap = new Int32Array(poolSize);
+engine.getSlotMap(range, poolSize, slotMap);
+// slotMap[slot] = rowIndex (-1 if unused)
+
+// Velocity-based dynamic buffer
+const velocity = engine.calculateVelocity(currentScrollTop, lastScrollTop, dt);
+const extraBuffer = engine.getDynamicBuffer(velocity);
+const rangeWithBuffer = engine.computeRange(scrollTop, extraBuffer);
+
+// Total scroll height
+const totalHeight = engine.getTotalSize(paddingVertical);
+```
+
+## API
+
+### `new VirtualEngine(options)`
+
+| Option | Type | Description |
+|--------|------|-------------|
+| `totalCount` | `number` | Total number of items |
+| `itemHeight` | `number` | Fixed row height in px |
+| `viewportHeight` | `number` | Visible area height in px |
+| `buffer` | `number` | Rows to render above/below viewport |
+
+### Instance Methods
+
+| Method | Returns | Description |
+|--------|---------|-------------|
+| `updateOptions(partial)` | `void` | Update any subset of options |
+| `computeRange(scrollTop, extraBuffer?)` | `VirtualRange` | Compute visible `{ start, end }` indices. Reuses internal object — do not hold references across calls |
+| `getSlotMap(range, poolSize, out)` | `Int32Array` | Fill `out` with row index per slot (`-1` = empty) |
+| `calculateVelocity(current, last, dt)` | `number` | Scroll velocity in px/ms |
+| `getDynamicBuffer(velocity)` | `number` | Returns `10` if velocity > threshold, otherwise `buffer` |
+| `getTotalSize(paddingVertical?)` | `number` | Total scrollable height |
+
+### Constants
+
+| Constant | Value | Description |
+|----------|-------|-------------|
+| `VELOCITY_THRESHOLD` | `2` | px/ms threshold for fast scroll detection |
+| `DYNAMIC_BUFFER_FAST_SCROLL` | `10` | Buffer rows during fast scroll |
+| `SCROLL_STOP_DELAY` | `150` | ms delay to detect scroll stop |
+
+### DOM Utility
+
+```ts
+import { setTextNode } from "virtual-engine";
+
+// Efficiently set text content without innerHTML/textContent overhead
+setTextNode(element, "new value");
+```
+
+Caches the `Text` node on the element and updates `nodeValue` directly — avoids DOM teardown and layout recalculation.
+
+## React Bindings
+
+For React, use [react-virtual-engine](https://www.npmjs.com/package/react-virtual-engine) which wraps this core with a ready-to-use `<VirtualList>` component.
+
+## License
+
+MIT
