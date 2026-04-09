@@ -1,0 +1,21 @@
+#!/usr/bin/env sh
+
+# Load NVM and use Node 22
+export NVM_DIR="$HOME/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+nvm use 22 > /dev/null 2>&1
+
+# Run lint-staged quietly to prevent VSCode from mistaking progress logs for errors
+npx lint-staged --quiet
+EXIT_CODE=$?
+
+if [ $EXIT_CODE -ne 0 ]; then
+  echo ""
+  echo "❌❌❌ ---------------------------------------------------------------------- ❌❌❌"
+  echo "❌ ERROR: Code quality checks failed (ESLint/Prettier issues found).          ❌"
+  echo "❌ Commit aborted.                                                            ❌"
+  echo "❌ Please check the detailed output above to identify and fix the violations. ❌"
+  echo "❌❌❌ ---------------------------------------------------------------------- ❌❌❌"
+  echo ""
+  exit $EXIT_CODE
+fi

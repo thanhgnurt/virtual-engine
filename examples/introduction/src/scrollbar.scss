@@ -1,0 +1,41 @@
+/* Global Scrollbar Styles */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(171, 180, 192, 0.3);
+  border-radius: 10px;
+  transition: background 0.2s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(184, 195, 210, 0.6);
+}
+
+/* Firefox Support */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(162, 174, 190, 0.3) transparent;
+}
+
+/* Virtual List specific scrollbar if needed */
+.ve-scrollbar {
+  &::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: rgba(100, 116, 139, 0.2);
+    border-radius: 10px;
+
+    &:hover {
+      background: rgba(148, 163, 184, 0.4);
+    }
+  }
+}

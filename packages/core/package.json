@@ -1,0 +1,27 @@
+{
+  "name": "virtual-engine",
+  "version": "1.0.2",
+  "description": "High-performance, zero-allocation computational core for the virtual-engine.",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup src/index.ts --format cjs,esm --dts --minify --clean",
+    "dev": "tsup src/index.ts --format cjs,esm --watch --dts"
+  },
+  "keywords": [
+    "virtualization",
+    "performance",
+    "rendering-engine",
+    "zero-allocation"
+  ],
+  "author": "Thanh Trung Le <thanhgnurt@gmail.com>",
+  "license": "MIT",
+  "devDependencies": {
+    "tsup": "^8.0.0",
+    "typescript": "^5.0.0"
+  }
+}
