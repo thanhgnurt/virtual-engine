@@ -1,6 +1,6 @@
 {
   "name": "virtual-engine",
-  "version": "1.0.2",
+  "version": "1.0.6",
   "description": "High-performance, zero-allocation computational core for the virtual-engine.",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
@@ -20,6 +20,14 @@
   ],
   "author": "Thanh Trung Le <thanhgnurt@gmail.com>",
   "license": "MIT",
+  "homepage": "https://react-virtual-engine.vercel.app/",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/thanhgnurt/virtual-engine.git"
+  },
+  "bugs": {
+    "url": "https://github.com/thanhgnurt/virtual-engine/issues"
+  },
   "devDependencies": {
     "tsup": "^8.0.0",
     "typescript": "^5.0.0"
