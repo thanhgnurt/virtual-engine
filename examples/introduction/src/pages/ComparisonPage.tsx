@@ -1,10 +1,11 @@
-import VirtualList from "react-virtual-engine";
 import React, { memo, useMemo, useState } from "react";
+import VirtualList from "react-virtual-engine";
 import { CodeBlock } from "../components/CodeBlock";
 import { Footer } from "../components/Footer";
 import { Header } from "../components/Header";
 import { ReactWindowList } from "../components/ReactWindowList";
 import { VirtualRow, VirtualRowData } from "../components/VirtualRow";
+import { ROW_HEIGH } from "../constants";
 
 const veCode = `// 1. Imperative Row Update Logic
 const VirtualRow = forwardRef(({ index, data }, ref) => {
@@ -159,10 +160,10 @@ export const ComparisonPage: React.FC = () => {
             <div className="glass rounded-md overflow-hidden border border-white/5 h-[600px] relative">
               <VirtualList
                 items={items}
-                itemHeight={44}
+                itemHeight={ROW_HEIGH}
                 height={600}
                 className="ve-scrollbar"
-                rowClass="pl-6 pr-10 py-2 border-b border-white/5 flex items-center justify-between hover:bg-slate-800/20"
+                rowClass="pl-6 pr-10 py-2 border-b border-white/5 flex items-center justify-between hover:bg-slate-800/20 cursor-pointer"
                 renderItem={renderItem}
               />
             </div>
@@ -184,7 +185,11 @@ export const ComparisonPage: React.FC = () => {
               </span>
             </div>
             <div className="glass rounded-md overflow-hidden border border-white/5 h-[600px] relative">
-              <ReactWindowList items={items} itemHeight={44} height={600} />
+              <ReactWindowList
+                items={items}
+                itemHeight={ROW_HEIGH}
+                height={600}
+              />
             </div>
             <p className="text-xs text-slate-500 px-4">
               Uses standard React component reconciliation. Each row is a React

@@ -4,6 +4,7 @@ import { Features } from "../components/Features";
 import { Footer } from "../components/Footer";
 import { Header } from "../components/Header";
 import { VirtualRow, VirtualRowData } from "../components/VirtualRow";
+import { ROW_HEIGH } from "../constants";
 
 const ITEM_COUNT = 100000;
 
@@ -41,7 +42,7 @@ export const HomePage: React.FC = () => {
           <div className="h-[500px] w-full bg-slate-950/50">
             <VirtualList
               items={items}
-              itemHeight={44}
+              itemHeight={ROW_HEIGH}
               height={500}
               className="ve-scrollbar"
               rowClass="pl-6 pr-10 py-2 border-b border-white/5 flex items-center justify-between hover:bg-slate-800/20 cursor-pointer"

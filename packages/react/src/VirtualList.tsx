@@ -1,8 +1,3 @@
-import {
-  SCROLL_STOP_DELAY,
-  VirtualEngine,
-  VirtualRange,
-} from "virtual-engine";
 import React, {
   forwardRef,
   memo,
@@ -14,6 +9,7 @@ import React, {
   useReducer,
   useRef,
 } from "react";
+import { SCROLL_STOP_DELAY, VirtualEngine, VirtualRange } from "virtual-engine";
 import { VirtualItem } from "./VirtualItem";
 
 // ─────────────────────────────────────────────
@@ -73,14 +69,6 @@ const VISIBILITY_HIDDEN = "hidden";
 const VISIBILITY_VISIBLE = "visible";
 const TYPE_FUNCTION = "function";
 
-const STYLE_HIDDEN: React.CSSProperties = Object.freeze({
-  position: "absolute",
-  transform: HIDDEN_TRANSFORM,
-  visibility: VISIBILITY_HIDDEN,
-  width: "100%",
-  contain: "strict",
-});
-
 // ─────────────────────────────────────────────
 // VirtualList
 // ─────────────────────────────────────────────
@@ -118,6 +106,18 @@ const VirtualList = forwardRef(
           buffer: bufferRow,
         }),
       [itemHeight, height, bufferRow],
+    );
+
+    const styleHidden = useMemo(
+      () => ({
+        position: "absolute",
+        transform: HIDDEN_TRANSFORM,
+        visibility: VISIBILITY_HIDDEN,
+        width: "100%",
+        contain: "strict",
+        height: itemHeight,
+      }),
+      [height],
     );
 
     const [, _forceUpdate] = useReducer((v: number) => v + 1, 0);
@@ -249,7 +249,7 @@ const VirtualList = forwardRef(
               lastCardIdxsRef.current[s] = cardIdx ?? -1;
             } else {
               const initStyle = isOutOfRange
-                ? STYLE_HIDDEN
+                ? styleHidden
                 : {
                     position: "absolute",
                     transform: getTransform(top),
@@ -309,6 +309,7 @@ const VirtualList = forwardRef(
         cardIdx,
         renderItem,
         rowClass,
+        styleHidden,
       ],
     );
 
