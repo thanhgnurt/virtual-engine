@@ -1,6 +1,6 @@
 {
   "name": "virtual-engine",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "private": true,
   "description": "High-performance, zero-allocation rendering engine monorepo.",
   "workspaces": [

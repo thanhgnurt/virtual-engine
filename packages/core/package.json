@@ -1,6 +1,6 @@
 {
   "name": "virtual-engine",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "description": "High-performance, zero-allocation computational core for the virtual-engine.",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
