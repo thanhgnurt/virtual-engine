@@ -29,7 +29,13 @@ export const Header: React.FC<HeaderProps> = () => {
       <div className="header-container">
         <div className="header-left">
           <Link to="/" className="header-logo">
-            <div className="logo-box">VE</div>
+            <div className="logo-box">
+              <div className="logo-slots">
+                <span className="slot mini" />
+                <span className="logo-ve">VE</span>
+                <span className="slot mini" />
+              </div>
+            </div>
             <span className="logo-text">Virtual Engine</span>
             <span className="logo-version">v{__APP_VERSION__}</span>
           </Link>
