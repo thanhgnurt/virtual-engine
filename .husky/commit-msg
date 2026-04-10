@@ -22,7 +22,7 @@ if [ $EXIT_CODE -ne 0 ]; then
   echo "💡 Expected format:  <type>(<scope>): <subject>"
   echo "   Examples:"
   echo "     feat(core): add virtual scroll support"
-  echo "     fix(react): resolve memory leak in VirtualList"
+  echo "     fix(react): resolve memory leak in ReactVirtualEngine"
   echo "     docs: update README with usage examples"
   echo "     chore: upgrade dependencies"
   echo ""

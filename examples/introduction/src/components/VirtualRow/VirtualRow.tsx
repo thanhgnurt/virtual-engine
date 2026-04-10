@@ -1,5 +1,6 @@
-import { setTextNode, type IVirtualRowHandle } from "react-virtual-engine";
 import { forwardRef, memo, useImperativeHandle, useRef } from "react";
+import { setTextNode, type IVirtualRowHandle } from "react-virtual-engine";
+import "./VirtualRow.scss";
 
 export interface VirtualRowData {
   id: number;
@@ -26,7 +27,6 @@ export const VirtualRow = memo(
 
       useImperativeHandle(ref, () => ({
         update: (data, index) => {
-          // 2. Index / Content Check
           const indexChanged = index !== indexValueRef.current;
           const itemChanged = data?.id !== itemRef.current?.id;
 
@@ -46,8 +46,8 @@ export const VirtualRow = memo(
             if (changeRef.current) {
               const text = `${data.change >= 0 ? "+" : ""}${data.change.toFixed(2)}%`;
               setTextNode(changeRef.current, text);
-              changeRef.current.className = `font-mono text-sm ${
-                data.change >= 0 ? "text-emerald-400" : "text-rose-400"
+              changeRef.current.className = `row-change ${
+                data.change >= 0 ? "positive" : "negative"
               }`;
             }
           }
@@ -56,25 +56,22 @@ export const VirtualRow = memo(
 
       return (
         <>
-          <div className="flex items-center gap-4">
-            <span
-              ref={indexRef}
-              className="text-slate-500 font-mono text-sm w-12"
-            >
+          <div className="row-left">
+            <span ref={indexRef} className="row-index">
               #{initialIndex}
             </span>
-            <span ref={nameRef} className="text-slate-200 font-medium">
+            <span ref={nameRef} className="row-name">
               {initialData?.name}
             </span>
           </div>
-          <div className="flex gap-8">
-            <span ref={priceRef} className="text-brand-400 font-mono">
+          <div className="row-right">
+            <span ref={priceRef} className="row-price">
               ${initialData?.price.toFixed(2)}
             </span>
             <span
               ref={changeRef}
-              className={`font-mono text-sm ${
-                initialData?.change >= 0 ? "text-emerald-400" : "text-rose-400"
+              className={`row-change ${
+                initialData?.change >= 0 ? "positive" : "negative"
               }`}
             >
               {initialData?.change >= 0 ? "+" : ""}

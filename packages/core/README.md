@@ -60,31 +60,31 @@ const totalHeight = engine.getTotalSize(paddingVertical);
 
 ### `new VirtualEngine(options)`
 
-| Option | Type | Description |
-|--------|------|-------------|
-| `totalCount` | `number` | Total number of items |
-| `itemHeight` | `number` | Fixed row height in px |
-| `viewportHeight` | `number` | Visible area height in px |
-| `buffer` | `number` | Rows to render above/below viewport |
+| Option           | Type     | Description                         |
+| ---------------- | -------- | ----------------------------------- |
+| `totalCount`     | `number` | Total number of items               |
+| `itemHeight`     | `number` | Fixed row height in px              |
+| `viewportHeight` | `number` | Visible area height in px           |
+| `buffer`         | `number` | Rows to render above/below viewport |
 
 ### Instance Methods
 
-| Method | Returns | Description |
-|--------|---------|-------------|
-| `updateOptions(partial)` | `void` | Update any subset of options |
+| Method                                  | Returns        | Description                                                                                            |
+| --------------------------------------- | -------------- | ------------------------------------------------------------------------------------------------------ |
+| `updateOptions(partial)`                | `void`         | Update any subset of options                                                                           |
 | `computeRange(scrollTop, extraBuffer?)` | `VirtualRange` | Compute visible `{ start, end }` indices. Reuses internal object — do not hold references across calls |
-| `getSlotMap(range, poolSize, out)` | `Int32Array` | Fill `out` with row index per slot (`-1` = empty) |
-| `calculateVelocity(current, last, dt)` | `number` | Scroll velocity in px/ms |
-| `getDynamicBuffer(velocity)` | `number` | Returns `10` if velocity > threshold, otherwise `buffer` |
-| `getTotalSize(paddingVertical?)` | `number` | Total scrollable height |
+| `getSlotMap(range, poolSize, out)`      | `Int32Array`   | Fill `out` with row index per slot (`-1` = empty)                                                      |
+| `calculateVelocity(current, last, dt)`  | `number`       | Scroll velocity in px/ms                                                                               |
+| `getDynamicBuffer(velocity)`            | `number`       | Returns `10` if velocity > threshold, otherwise `buffer`                                               |
+| `getTotalSize(paddingVertical?)`        | `number`       | Total scrollable height                                                                                |
 
 ### Constants
 
-| Constant | Value | Description |
-|----------|-------|-------------|
-| `VELOCITY_THRESHOLD` | `2` | px/ms threshold for fast scroll detection |
-| `DYNAMIC_BUFFER_FAST_SCROLL` | `10` | Buffer rows during fast scroll |
-| `SCROLL_STOP_DELAY` | `150` | ms delay to detect scroll stop |
+| Constant                     | Value | Description                               |
+| ---------------------------- | ----- | ----------------------------------------- |
+| `VELOCITY_THRESHOLD`         | `2`   | px/ms threshold for fast scroll detection |
+| `DYNAMIC_BUFFER_FAST_SCROLL` | `10`  | Buffer rows during fast scroll            |
+| `SCROLL_STOP_DELAY`          | `150` | ms delay to detect scroll stop            |
 
 ### DOM Utility
 
@@ -99,7 +99,7 @@ Caches the `Text` node on the element and updates `nodeValue` directly — avoid
 
 ## React Bindings
 
-For React, use [react-virtual-engine](https://www.npmjs.com/package/react-virtual-engine) which wraps this core with a ready-to-use `<VirtualList>` component.
+For React, use [react-virtual-engine](https://www.npmjs.com/package/react-virtual-engine) which wraps this core with a ready-to-use `<ReactVirtualEngine>` component.
 
 ## License
 

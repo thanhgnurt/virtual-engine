@@ -1,0 +1,116 @@
+.api-page {
+  animation: fadeIn 0.4s ease-out;
+
+  .page-header {
+    margin-bottom: 4rem;
+
+    .page-title {
+      font-size: 3rem;
+      font-weight: 800;
+      color: #fff;
+      margin-bottom: 0.5rem;
+      letter-spacing: -0.02em;
+    }
+
+    .page-subtitle {
+      font-size: 1.125rem;
+      color: var(--color-slate-400);
+      margin: 0;
+    }
+  }
+
+  .content-section {
+    margin-bottom: 4rem;
+
+    .section-title {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 1rem;
+    }
+
+    .section-desc {
+      color: var(--color-slate-300);
+      line-height: 1.6;
+      margin-bottom: 2rem;
+
+      code {
+        background: rgba(255, 255, 255, 0.1);
+        padding: 0.2rem 0.4rem;
+        border-radius: 0.25rem;
+        font-family: monospace;
+        font-size: 0.9em;
+      }
+    }
+
+    .sub-title {
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: #fff;
+      margin: 2.5rem 0 1rem;
+    }
+
+    .table-wrapper {
+      width: 100%;
+      overflow-x: auto;
+      margin-bottom: 2rem;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 0.5rem;
+      background: rgba(255, 255, 255, 0.02);
+
+      .api-table {
+        width: 100%;
+        border-collapse: collapse;
+        text-align: left;
+        min-width: 600px;
+
+        th,
+        td {
+          padding: 1rem;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        th {
+          font-weight: 600;
+          color: var(--color-slate-300);
+          background: rgba(0, 0, 0, 0.2);
+        }
+
+        td {
+          color: var(--color-slate-400);
+          font-size: 0.95rem;
+
+          code {
+            color: var(--color-brand-400);
+            background: rgba(var(--brand-500-rgb), 0.1);
+            padding: 0.2rem 0.4rem;
+            border-radius: 0.25rem;
+            font-family: monospace;
+            font-size: 0.9em;
+          }
+
+          .required {
+            color: #ef4444;
+            font-weight: bold;
+            margin-left: 0.25rem;
+          }
+        }
+
+        tr:last-child td {
+          border-bottom: none;
+        }
+      }
+    }
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}

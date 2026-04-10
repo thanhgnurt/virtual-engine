@@ -1,0 +1,22 @@
+.virtual-row-item {
+  padding: 0.5rem 2.5rem 0.5rem 1.5rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  transition: background-color 0.2s ease;
+  cursor: pointer;
+
+  &:hover {
+    background-color: rgba(var(--slate-800-rgb), 0.2);
+  }
+}
+
+.benchmark-card {
+  background-color: rgba(var(--slate-900-rgb), 0.6);
+  backdrop-filter: blur(12px);
+  border-radius: var(--radius-card);
+  overflow: hidden;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}

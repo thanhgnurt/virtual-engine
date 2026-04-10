@@ -1,0 +1,38 @@
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(1, minmax(0, 1fr));
+  gap: 1.5rem;
+  margin-top: 3rem;
+
+  @media (min-width: 768px) {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.feature-card {
+  padding: 2rem;
+  border-radius: var(--radius-card);
+  background-color: rgba(var(--slate-900-rgb), 0.6);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  transition: all 0.3s ease;
+
+  &:hover {
+    border-color: rgba(255, 255, 255, 0.1);
+    transform: translateY(-2px);
+    background-color: rgba(var(--slate-900-rgb), 0.8);
+  }
+
+  .feature-title {
+    font-size: 1.125rem;
+    font-weight: 700;
+    margin-bottom: 0.75rem;
+    color: #fff;
+  }
+
+  .feature-description {
+    color: var(--color-slate-400);
+    font-size: 0.875rem;
+    line-height: 1.5;
+  }
+}

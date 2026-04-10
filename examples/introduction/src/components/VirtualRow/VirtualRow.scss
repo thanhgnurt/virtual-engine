@@ -1,0 +1,43 @@
+.row-index {
+  color: var(--color-slate-500);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.875rem;
+  width: 3rem;
+}
+
+.row-left {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.row-right {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+  min-width: 140px; /* Ensures enough space for price + percentage */
+  justify-content: flex-end; /* Align numbers neatly to the right */
+}
+
+.row-name {
+  color: var(--color-slate-200);
+  font-weight: 500;
+}
+
+.row-price {
+  color: var(--color-brand-400);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.row-change {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.875rem;
+
+  &.positive {
+    color: var(--color-emerald-400);
+  }
+
+  &.negative {
+    color: var(--color-rose-400);
+  }
+}

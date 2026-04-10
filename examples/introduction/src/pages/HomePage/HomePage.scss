@@ -1,0 +1,52 @@
+.home-page {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.home-demo-section {
+  padding: 4rem;
+  background-color: var(--color-slate-950);
+  display: flex;
+  justify-content: center;
+  border-top: 1px solid rgba(255, 255, 255, 0.03);
+
+  .section-container {
+    max-width: 64rem;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .section-header {
+    text-align: center;
+    margin-bottom: 2rem;
+
+    .section-title {
+      font-size: 3.5rem;
+      font-weight: 850;
+      color: #fff;
+      margin-bottom: 1.5rem;
+      letter-spacing: -0.04em;
+      line-height: 1.1;
+      background: linear-gradient(135deg, #fff 0%, var(--color-slate-500) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .section-subtitle {
+      font-size: 1.25rem;
+      color: var(--color-slate-400);
+      max-width: 40rem;
+      margin: 0 auto;
+      line-height: 1.6;
+    }
+  }
+
+  // Ensure the simulator card inside home has its own presence
+  .simulator-card {
+    width: 100%;
+    box-shadow: 0 30px 60px -12px rgba(0, 0, 0, 0.7);
+  }
+}

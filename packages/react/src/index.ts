@@ -1,7 +1,7 @@
-import VirtualList from "./VirtualList";
+import ReactVirtualEngine from "./ReactVirtualEngine";
 
-export { VirtualList };
-export default VirtualList;
-export * from "./VirtualList";
-export * from "./VirtualItem";
+export { ReactVirtualEngine };
+export default ReactVirtualEngine;
+export * from "./ReactVirtualEngine";
+export * from "./EngineSlot";
 export * from "virtual-engine";

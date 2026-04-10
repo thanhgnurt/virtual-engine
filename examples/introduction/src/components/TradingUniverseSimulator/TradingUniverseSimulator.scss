@@ -1,0 +1,66 @@
+.simulator-card {
+  height: 100%;
+  background-color: rgba(var(--slate-900-rgb), 0.3);
+  border-radius: var(--radius-card);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+
+  .card-header {
+    padding: 1.25rem 1.5rem;
+    background-color: rgba(255, 255, 255, 0.02);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-shrink: 0;
+
+    .window-controls {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+
+      .control-dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        &.red {
+          background-color: #ff5f56;
+        }
+        &.amber {
+          background-color: #ffbd2e;
+        }
+        &.green {
+          background-color: #27c93f;
+        }
+      }
+
+      .header-title {
+        margin-left: 0.5rem;
+        color: var(--color-slate-300);
+        font-size: 0.9rem;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+    }
+
+    .header-stats {
+      color: var(--color-slate-400);
+      font-size: 0.85rem;
+      font-family: monospace;
+    }
+  }
+
+  .simulator-container {
+    flex: 1;
+    min-height: 0;
+    background-color: rgba(0, 0, 0, 0.2);
+
+    .ve-scrollbar {
+      height: 500px;
+    }
+  }
+}

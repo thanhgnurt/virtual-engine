@@ -1,0 +1,23 @@
+.rw-row {
+  padding: 0 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(var(--slate-800-rgb), 0.5);
+  transition: background-color 0.2s ease;
+
+  &:hover {
+    background-color: rgba(var(--slate-800-rgb), 0.2);
+  }
+
+  .row-left {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .row-right {
+    display: flex;
+    gap: 2rem;
+  }
+}

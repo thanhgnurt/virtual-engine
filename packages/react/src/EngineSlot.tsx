@@ -1,7 +1,7 @@
 import React, { forwardRef, memo } from "react";
-import { IVirtualRowHandle } from "./VirtualList";
+import { IVirtualRowHandle } from "./ReactVirtualEngine";
 
-export interface VirtualItemProps<T> {
+export interface EngineSlotProps<T> {
   index: number;
   data: T;
   version?: number;
@@ -11,10 +11,10 @@ export interface VirtualItemProps<T> {
   ) => React.ReactElement<{ ref?: React.Ref<IVirtualRowHandle<T>> }>;
 }
 
-export const VirtualItem = memo(
+export const EngineSlot = memo(
   forwardRef(
     <T,>(
-      { index, data, renderItem }: VirtualItemProps<T>,
+      { index, data, renderItem }: EngineSlotProps<T>,
       ref: React.ForwardedRef<IVirtualRowHandle<T>>,
     ) => {
       const node = renderItem(data, index);
@@ -33,7 +33,7 @@ export const VirtualItem = memo(
     );
   },
 ) as unknown as <T>(
-  props: VirtualItemProps<T> & {
+  props: EngineSlotProps<T> & {
     ref?: React.ForwardedRef<IVirtualRowHandle<T>>;
   },
 ) => JSX.Element;

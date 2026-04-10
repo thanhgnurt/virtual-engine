@@ -1,0 +1,44 @@
+:root {
+  /* Slate Scale (Base UI) */
+  --slate-50-rgb: 248, 250, 252;
+  --slate-100-rgb: 241, 245, 249;
+  --slate-200-rgb: 226, 232, 240;
+  --slate-300-rgb: 203, 213, 225;
+  --slate-400-rgb: 148, 163, 184;
+  --slate-500-rgb: 100, 116, 139;
+  --slate-600-rgb: 71, 85, 105;
+  --slate-700-rgb: 51, 65, 85;
+  --slate-800-rgb: 30, 41, 59;
+  --slate-900-rgb: 15, 23, 42;
+  --slate-950-rgb: 2, 6, 23;
+
+  /* Brand Scale (Primary Accents) */
+  --brand-400-rgb: 56, 189, 248;
+  --brand-500-rgb: 14, 165, 233;
+  --brand-600-rgb: 2, 132, 199;
+
+  /* Functional Colors */
+  --emerald-400-rgb: 52, 211, 153;
+  --rose-400-rgb: 251, 113, 133;
+
+  /* Mapped Variables */
+  --color-slate-50: rgb(var(--slate-50-rgb));
+  --color-slate-200: rgb(var(--slate-200-rgb));
+  --color-slate-300: rgb(var(--slate-300-rgb));
+  --color-slate-400: rgb(var(--slate-400-rgb));
+  --color-slate-500: rgb(var(--slate-500-rgb));
+  --color-slate-700: rgb(var(--slate-700-rgb));
+  --color-slate-800: rgb(var(--slate-800-rgb));
+  --color-slate-900: rgb(var(--slate-900-rgb));
+  --color-slate-950: rgb(var(--slate-950-rgb));
+
+  --color-brand-400: rgb(var(--brand-400-rgb));
+  --color-brand-500: rgb(var(--brand-500-rgb));
+  --color-brand-600: rgb(var(--brand-600-rgb));
+
+  --color-emerald-400: rgb(var(--emerald-400-rgb));
+  --color-rose-400: rgb(var(--rose-400-rgb));
+
+  /* UI Variables */
+  --radius-card: 0.25rem;
+}

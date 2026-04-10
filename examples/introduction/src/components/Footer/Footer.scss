@@ -1,0 +1,103 @@
+.app-footer {
+  background-color: var(--color-slate-950);
+  padding: 5rem 2rem 3rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.03);
+
+  .footer-content {
+    max-width: 64rem;
+    margin: 0 auto;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4rem;
+    margin-bottom: 4rem;
+  }
+
+  .footer-brand {
+    flex: 1;
+    min-width: 250px;
+
+    .brand-logo {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      color: #fff;
+      font-weight: 800;
+      font-size: 1.25rem;
+      margin-bottom: 1.25rem;
+      letter-spacing: -0.02em;
+
+      .logo-box {
+        background-color: var(--color-brand-500);
+        color: #fff;
+        padding: 0.25rem 0.5rem;
+        border-radius: 6px;
+        font-size: 0.9rem;
+      }
+    }
+
+    .brand-desc {
+      color: var(--color-slate-400);
+      line-height: 1.6;
+      font-size: 0.95rem;
+      max-width: 20rem;
+    }
+  }
+
+  .footer-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4rem;
+
+    .link-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+
+      h4 {
+        color: #fff;
+        font-size: 0.9rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 0.5rem;
+      }
+
+      a {
+        color: var(--color-slate-400);
+        text-decoration: none;
+        font-size: 0.95rem;
+        transition: color 0.2s ease;
+
+        &:hover {
+          color: var(--color-brand-400);
+        }
+      }
+    }
+  }
+
+  .footer-bottom {
+    max-width: 64rem;
+    margin: 0 auto;
+    padding-top: 2rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: var(--color-slate-500);
+    font-size: 0.85rem;
+
+    .social-status {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+
+      .status-dot {
+        width: 8px;
+        height: 8px;
+        background-color: var(--color-emerald-500);
+        border-radius: 50%;
+        box-shadow: 0 0 10px var(--color-emerald-500);
+      }
+    }
+  }
+}

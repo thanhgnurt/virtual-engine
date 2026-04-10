@@ -29,12 +29,12 @@ const pkgPaths = [
 pkgPaths.forEach((p) => {
   const data = JSON.parse(fs.readFileSync(p, "utf-8"));
   data.version = nextVersion;
-  
+
   // Update internal monorepo dependency automatically
   if (data.dependencies && data.dependencies["virtual-engine"]) {
     data.dependencies["virtual-engine"] = `^${nextVersion}`;
   }
-  
+
   fs.writeFileSync(p, JSON.stringify(data, null, 2) + "\n");
 });
 

@@ -1,6 +1,6 @@
 {
   "name": "virtual-engine",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "private": true,
   "description": "High-performance, zero-allocation rendering engine monorepo.",
   "workspaces": [
@@ -56,5 +56,8 @@
     "lint-staged": "^16.4.0",
     "prettier": "^3.8.1",
     "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "react-virtual-engine": "^1.0.7"
   }
 }

@@ -1,6 +1,6 @@
 {
   "name": "virtual-engine",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "description": "High-performance, zero-allocation computational core for the virtual-engine.",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
@@ -14,9 +14,15 @@
   },
   "keywords": [
     "virtualization",
+    "virtual-list",
+    "virtual-scroll",
+    "windowing",
     "performance",
     "rendering-engine",
-    "zero-allocation"
+    "zero-allocation",
+    "dom-pooling",
+    "infinite-scroll",
+    "large-list"
   ],
   "author": "Thanh Trung Le <thanhgnurt@gmail.com>",
   "license": "MIT",

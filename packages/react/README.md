@@ -27,56 +27,100 @@ Peer dependencies: `react >= 16.8.0` and `react-dom >= 16.8.0`.
 ## Quick Start
 
 ```tsx
-import { VirtualList, VirtualListHandle } from "react-virtual-engine";
-import { useRef } from "react";
+import {
+  ReactVirtualEngine,
+  ReactVirtualEngineHandle,
+  IVirtualRowHandle,
+} from "react-virtual-engine";
+import { forwardRef, useImperativeHandle, useRef } from "react";
 
-const items = Array.from({ length: 100_000 }, (_, i) => ({ id: i, text: `Row ${i}` }));
+interface Item {
+  id: number;
+  text: string;
+}
+
+const items = Array.from({ length: 100_000 }, (_, i) => ({
+  id: i,
+  text: `Row ${i}`,
+}));
+
+// Row component with imperative update via ref
+const Row = forwardRef<IVirtualRowHandle<Item>, { item: Item; index: number }>(
+  ({ item, index }, ref) => {
+    const elRef = useRef<HTMLDivElement>(null);
+
+    useImperativeHandle(ref, () => ({
+      update: (newItem) => {
+        if (elRef.current) elRef.current.textContent = (newItem as Item).text;
+      },
+    }));
+
+    return (
+      <div ref={elRef} style={{ padding: 8 }}>
+        {item.text}
+      </div>
+    );
+  },
+);
 
 function App() {
-  const listRef = useRef<VirtualListHandle>(null);
+  const listRef = useRef<ReactVirtualEngineHandle>(null);
 
   return (
-    <VirtualList
+    <ReactVirtualEngine<Item>
       ref={listRef}
       items={items}
-      itemHeight={40}
-      height={600}
-      renderItem={(item, index) => (
-        <div style={{ padding: 8 }}>{item.text}</div>
-      )}
+      itemHeight={50}
+      height={500}
+      renderItem={(item, index) => <Row item={item} />}
     />
   );
 }
 ```
 
-## Props — `VirtualListProps<T>`
+## Props — `ReactVirtualEngineProps<T>`
 
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `items` | `ArrayLike<T>` | — | Data source |
-| `itemHeight` | `number` | — | Fixed row height in px |
-| `height` | `number` | `600` | Viewport height in px |
-| `width` | `string \| number` | `"100%"` | Viewport width |
-| `bufferRow` | `number` | `0` | Extra rows rendered above/below viewport |
-| `paddingVertical` | `number` | `0` | Vertical padding inside the scroll container |
-| `renderItem` | `(item: T, index: number) => ReactElement` | — | Row renderer |
-| `onScroll` | `(scrollTop: number) => void` | — | Scroll callback |
-| `className` | `string` | — | Container class |
-| `rowClass` | `string \| (item: T, index: number) => string` | — | Class applied to each row wrapper |
-| `style` | `CSSProperties` | — | Container inline styles |
-| `version` | `number` | — | Bump to force re-render of all visible rows |
-| `role` | `string` | — | ARIA role for the container |
-| `cardIdx` | `number` | — | External index passed through to row updates |
+Virtual Engine components accept all standard virtualization properties.
 
-## Imperative Handle — `VirtualListHandle`
+## Imperative Handle — `ReactVirtualEngineHandle`
+
+You can control the engine imperatively by attaching a ref:
+
+```typescript
+const listRef = useRef<ReactVirtualEngineHandle>(null);
+listRef.current?.scrollToRow({ index: 500, align: "center" });
+```
+
+| Prop              | Type                                           | Default  | Description                                  |
+| ----------------- | ---------------------------------------------- | -------- | -------------------------------------------- |
+| `items`           | `ArrayLike<T>`                                 | —        | Data source                                  |
+| `itemHeight`      | `number`                                       | —        | Fixed row height in px                       |
+| `height`          | `number`                                       | `600`    | Viewport height in px                        |
+| `width`           | `string \| number`                             | `"100%"` | Viewport width                               |
+| `bufferRow`       | `number`                                       | `0`      | Extra rows rendered above/below viewport     |
+| `paddingVertical` | `number`                                       | `0`      | Vertical padding inside the scroll container |
+| `renderItem`      | `(item: T, index: number) => ReactElement`     | —        | Row renderer                                 |
+| `onScroll`        | `(scrollTop: number) => void`                  | —        | Scroll callback                              |
+| `className`       | `string`                                       | —        | Container class                              |
+| `rowClass`        | `string \| (item: T, index: number) => string` | —        | Class applied to each row wrapper            |
+| `style`           | `CSSProperties`                                | —        | Container inline styles                      |
+| `version`         | `number`                                       | —        | Bump to force re-render of all visible rows  |
+| `role`            | `string`                                       | —        | ARIA role for the container                  |
+| `cardIdx`         | `number`                                       | —        | External index passed through to row updates |
+
+## Imperative Handle — `ReactVirtualEngineHandle`
 
 Access via `ref`:
 
 ```tsx
-const listRef = useRef<VirtualListHandle>(null);
+const listRef = useRef<ReactVirtualEngineHandle>(null);
 
 // Scroll to a specific row
-listRef.current?.scrollToRow({ index: 500, align: "center", behavior: "smooth" });
+listRef.current?.scrollToRow({
+  index: 500,
+  align: "center",
+  behavior: "smooth",
+});
 
 // Imperatively update items without re-render from parent
 listRef.current?.update(newItems, newVersion);
@@ -88,14 +132,14 @@ listRef.current?.syncScrollTop(scrollTop);
 listRef.current?.updateViewportHeight(800);
 ```
 
-| Method | Description |
-|--------|-------------|
-| `element` | Readonly ref to the container `HTMLDivElement` |
+| Method                                      | Description                                                            |
+| ------------------------------------------- | ---------------------------------------------------------------------- |
+| `element`                                   | Readonly ref to the container `HTMLDivElement`                         |
 | `scrollToRow({ index, align?, behavior? })` | Scroll to row. `align`: `"auto"` \| `"start"` \| `"end"` \| `"center"` |
-| `update(items, version?)` | Push new data imperatively |
-| `syncScrollTop(scrollTop)` | Set scroll position directly |
-| `updateViewportHeight(height)` | Resize viewport on the fly |
-| `snapshotScroll()` / `restoreScroll()` | Reserved for future scroll restoration |
+| `update(items, version?)`                   | Push new data imperatively                                             |
+| `syncScrollTop(scrollTop)`                  | Set scroll position directly                                           |
+| `updateViewportHeight(height)`              | Resize viewport on the fly                                             |
+| `snapshotScroll()` / `restoreScroll()`      | Reserved for future scroll restoration                                 |
 
 ## Re-exports
 

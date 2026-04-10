@@ -10,7 +10,7 @@ import React, {
   useRef,
 } from "react";
 import { SCROLL_STOP_DELAY, VirtualEngine, VirtualRange } from "virtual-engine";
-import { VirtualItem } from "./VirtualItem";
+import { EngineSlot } from "./EngineSlot";
 
 // ─────────────────────────────────────────────
 // Types
@@ -28,7 +28,7 @@ export interface IVirtualRowHandle<T = unknown> {
   ) => void;
 }
 
-export interface VirtualListProps<T> {
+export interface ReactVirtualEngineProps<T> {
   items: ArrayLike<T>;
   itemHeight: number;
   height?: number;
@@ -48,7 +48,7 @@ export interface VirtualListProps<T> {
   paddingVertical?: number;
 }
 
-export interface VirtualListHandle {
+export interface ReactVirtualEngineHandle {
   readonly element: HTMLDivElement | null;
   scrollToRow: (config: {
     align?: "auto" | "center" | "end" | "start" | "smart";
@@ -63,6 +63,7 @@ export interface VirtualListHandle {
 }
 
 const MAX_POOL = 256;
+const POOL_OVERHEAD = 22; // extra slots for buffer rows + fast-scroll dynamic buffer + safety margin
 
 const HIDDEN_TRANSFORM = "translate(0, -9999px)";
 const VISIBILITY_HIDDEN = "hidden";
@@ -70,10 +71,10 @@ const VISIBILITY_VISIBLE = "visible";
 const TYPE_FUNCTION = "function";
 
 // ─────────────────────────────────────────────
-// VirtualList
+// ReactVirtualEngine
 // ─────────────────────────────────────────────
 
-const VirtualList = forwardRef(
+const ReactVirtualEngine = forwardRef(
   <T,>(
     {
       version,
@@ -90,8 +91,8 @@ const VirtualList = forwardRef(
       role,
       cardIdx,
       paddingVertical = 0,
-    }: VirtualListProps<T>,
-    ref: React.ForwardedRef<VirtualListHandle>,
+    }: ReactVirtualEngineProps<T>,
+    ref: React.ForwardedRef<ReactVirtualEngineHandle>,
   ) => {
     const containerRef = useRef<HTMLDivElement>(null);
 
@@ -116,8 +117,9 @@ const VirtualList = forwardRef(
         width: "100%",
         contain: "strict",
         height: itemHeight,
+        willChange: "transform",
       }),
-      [height],
+      [itemHeight],
     );
 
     const [, _forceUpdate] = useReducer((v: number) => v + 1, 0);
@@ -159,10 +161,21 @@ const VirtualList = forwardRef(
       new Int32Array(MAX_POOL).fill(-2),
     );
 
-    const transformPoolRef = useRef<Record<number, string>>({});
+    const transformPoolRef = useRef<Record<number, string>>(
+      Object.create(null),
+    );
+    const getTransform = useCallback((top: number) => {
+      const pool = transformPoolRef.current;
+      let val = pool[top];
+      if (val === undefined) {
+        val = "translateY(" + top + "px)";
+        pool[top] = val;
+      }
+      return val;
+    }, []);
 
     const poolSize = useMemo(
-      () => Math.min(Math.ceil(height / itemHeight) + 22, MAX_POOL),
+      () => Math.min(Math.ceil(height / itemHeight) + POOL_OVERHEAD, MAX_POOL),
       [height, itemHeight],
     );
 
@@ -178,19 +191,8 @@ const VirtualList = forwardRef(
         const ver = currentVersion ?? versionRef.current ?? -1;
         const its = currentItems ?? itemsRef.current;
         const slotMap = engine.getSlotMap(range, poolSize, slotMapRef.current);
-        const transformPool = transformPoolRef.current;
-
         const isRowClassFn = typeof rowClass === TYPE_FUNCTION;
         const staticRowClass = isRowClassFn ? "" : rowClass || "";
-
-        const getTransform = (top: number) => {
-          let val = transformPool[top];
-          if (val === undefined) {
-            val = `translateY(${top}px)`;
-            transformPool[top] = val;
-          }
-          return val;
-        };
 
         let needsRerender = false;
 
@@ -211,13 +213,12 @@ const VirtualList = forwardRef(
             const customClass = isOutOfRange
               ? ""
               : isRowClassFn
-                ? (rowClass as Function)(item, i)
+                ? (rowClass as any)(item, i)
                 : staticRowClass;
 
             const wrapper = wrapperRefs.current[s];
             if (wrapper) {
               if (isOutOfRange) {
-                // Performance: Do not clear className to avoid style recalculation thrashing
                 wrapper.style.transform = HIDDEN_TRANSFORM;
                 wrapper.style.visibility = VISIBILITY_HIDDEN;
               } else {
@@ -257,6 +258,7 @@ const VirtualList = forwardRef(
                     height: itemHeight,
                     visibility: VISIBILITY_VISIBLE,
                     contain: "strict",
+                    willChange: "transform",
                   };
 
               nodes[s] = (
@@ -268,7 +270,7 @@ const VirtualList = forwardRef(
                   className={customClass}
                   style={initStyle as React.CSSProperties}
                 >
-                  <VirtualItem<unknown>
+                  <EngineSlot<unknown>
                     ref={(r: unknown) => {
                       refs[s] = r;
                     }}
@@ -309,6 +311,7 @@ const VirtualList = forwardRef(
         cardIdx,
         renderItem,
         rowClass,
+        getTransform,
         styleHidden,
       ],
     );
@@ -422,65 +425,58 @@ const VirtualList = forwardRef(
 
     const lastKnownScrollTopRef = useRef(0);
     const lastScrollTimeRef = useRef(0);
-    const scrollStopTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
-      null,
-    );
+    const lastUpdateTimestampRef = useRef(0);
+    const lastVelocityRef = useRef(0);
 
-    // Pre-allocated range for scroll-stop check
+    const propsRef = useRef({
+      externalOnScroll,
+      cardIdx,
+      paddingVertical,
+      itemHeight,
+      height,
+      performUpdate,
+      forceUpdate,
+    });
+    propsRef.current = {
+      externalOnScroll,
+      cardIdx,
+      paddingVertical,
+      itemHeight,
+      height,
+      performUpdate,
+      forceUpdate,
+    };
+
     useLayoutEffect(() => {
       const el = containerRef.current;
       if (!el) return;
 
-      const onScrollStop = () => {
-        const next = engine.computeRange(el.scrollTop);
-        const nextStart = next.start;
-        const nextEnd = next.end;
-        if (
-          rangeRef.current.start !== nextStart ||
-          rangeRef.current.end !== nextEnd
-        ) {
-          rangeRef.current.start = nextStart;
-          rangeRef.current.end = nextEnd;
-          if (performUpdate(rangeRef.current)) forceUpdate();
-        }
-      };
-
-      const checkScrollStop = () => {
-        if (
-          performance.now() - lastScrollTimeRef.current >=
-          SCROLL_STOP_DELAY
-        ) {
-          scrollStopTimerRef.current = null;
-          onScrollStop();
-        } else {
-          scrollStopTimerRef.current = setTimeout(
-            checkScrollStop,
-            SCROLL_STOP_DELAY,
-          );
-        }
-      };
-
       const performRafUpdate = () => {
         const currentTop = el.scrollTop;
-        if (externalOnScroll) externalOnScroll(currentTop);
-        const now = performance.now();
-        const dt = now - lastScrollTimeRef.current;
-        const velocity = engine.calculateVelocity(
-          currentTop,
-          lastKnownScrollTopRef.current,
-          dt,
-        );
-        lastKnownScrollTopRef.current = currentTop;
-        lastScrollTimeRef.current = now;
+        const { externalOnScroll, performUpdate, forceUpdate } =
+          propsRef.current;
 
-        if (scrollStopTimerRef.current === null) {
-          scrollStopTimerRef.current = setTimeout(
-            checkScrollStop,
-            SCROLL_STOP_DELAY,
+        if (externalOnScroll) externalOnScroll(currentTop);
+
+        const now = performance.now();
+        const dt = now - lastUpdateTimestampRef.current;
+        let velocity = 0;
+
+        if (dt > 0 && dt < 100) {
+          const instantVelocity = engine.calculateVelocity(
+            currentTop,
+            lastKnownScrollTopRef.current,
+            dt,
           );
+          velocity = instantVelocity * 0.7 + lastVelocityRef.current * 0.3;
+        } else {
+          velocity = lastVelocityRef.current;
         }
 
-        // Apply hysteresis to extraBuffer to avoid range "jitter"
+        lastKnownScrollTopRef.current = currentTop;
+        lastUpdateTimestampRef.current = now;
+        lastVelocityRef.current = velocity;
+
         const extraBuffer = engine.getDynamicBuffer(velocity);
         const currentRange = rangeRef.current;
         const next = engine.computeRange(currentTop, extraBuffer);
@@ -492,22 +488,42 @@ const VirtualList = forwardRef(
           currentRange.end = nextEnd;
           if (performUpdate(currentRange)) forceUpdate();
         }
-        rafRef.current = null;
+
+        if (now - lastScrollTimeRef.current < SCROLL_STOP_DELAY) {
+          rafRef.current = requestAnimationFrame(performRafUpdate);
+        } else {
+          rafRef.current = null;
+          lastVelocityRef.current = 0;
+          const finalNext = engine.computeRange(currentTop);
+          if (
+            currentRange.start !== finalNext.start ||
+            currentRange.end !== finalNext.end
+          ) {
+            currentRange.start = finalNext.start;
+            currentRange.end = finalNext.end;
+            if (performUpdate(currentRange)) forceUpdate();
+          }
+        }
       };
 
       const onNativeScroll = () => {
-        if (rafRef.current !== null) return;
-        rafRef.current = requestAnimationFrame(performRafUpdate);
+        const now = performance.now();
+        lastScrollTimeRef.current = now;
+        if (rafRef.current === null) {
+          lastUpdateTimestampRef.current = now;
+          rafRef.current = requestAnimationFrame(performRafUpdate);
+        }
       };
+
       el.addEventListener("scroll", onNativeScroll, { passive: true });
       return () => {
         el.removeEventListener("scroll", onNativeScroll);
-        if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
-        if (scrollStopTimerRef.current !== null) {
-          clearTimeout(scrollStopTimerRef.current);
+        if (rafRef.current !== null) {
+          cancelAnimationFrame(rafRef.current);
+          rafRef.current = null;
         }
       };
-    }, [engine, performUpdate, forceUpdate, externalOnScroll]);
+    }, [engine]);
 
     return (
       <div
@@ -537,7 +553,9 @@ const VirtualList = forwardRef(
   },
 );
 
-VirtualList.displayName = "VirtualList";
-export default memo(VirtualList) as <T>(
-  props: VirtualListProps<T> & { ref?: React.ForwardedRef<VirtualListHandle> },
+ReactVirtualEngine.displayName = "ReactVirtualEngine";
+export default memo(ReactVirtualEngine) as <T>(
+  props: ReactVirtualEngineProps<T> & {
+    ref?: React.ForwardedRef<ReactVirtualEngineHandle>;
+  },
 ) => JSX.Element;
