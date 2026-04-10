@@ -51,7 +51,12 @@ const Row = forwardRef<IVirtualRowHandle<Item>, { item: Item; index: number }>(
 
     useImperativeHandle(ref, () => ({
       update: (newItem) => {
-        if (elRef.current) elRef.current.textContent = (newItem as Item).text;
+        if (elRef.current) {
+          elRef.current.textContent = (newItem as Item).text;
+        }
+      },
+      release: () => {
+        // Optional: Run cleanup logic when the row is hidden
       },
     }));
 
@@ -81,15 +86,6 @@ function App() {
 ## Props — `ReactVirtualEngineProps<T>`
 
 Virtual Engine components accept all standard virtualization properties.
-
-## Imperative Handle — `ReactVirtualEngineHandle`
-
-You can control the engine imperatively by attaching a ref:
-
-```typescript
-const listRef = useRef<ReactVirtualEngineHandle>(null);
-listRef.current?.scrollToRow({ index: 500, align: "center" });
-```
 
 | Prop              | Type                                           | Default  | Description                                  |
 | ----------------- | ---------------------------------------------- | -------- | -------------------------------------------- |
@@ -140,6 +136,15 @@ listRef.current?.updateViewportHeight(800);
 | `syncScrollTop(scrollTop)`                  | Set scroll position directly                                           |
 | `updateViewportHeight(height)`              | Resize viewport on the fly                                             |
 | `snapshotScroll()` / `restoreScroll()`      | Reserved for future scroll restoration                                 |
+
+## Zero-Allocation Row Handle — `IVirtualRowHandle<T>`
+
+To opt into the raw performance of Virtual Engine without React reconciliation overhead, your `renderItem` component MUST expose these methods via `useImperativeHandle`:
+
+| Method                                      | Description                                                            |
+| ------------------------------------------- | ---------------------------------------------------------------------- |
+| `update(item, index, cardIdx, rowEl, ...)`  | **Required.** Fired actively when the row's dataset changes or index shifts. Mutate the DOM safely inside this callback. |
+| `release()`                                 | **Optional.** Fired perfectly when a row is recycled or shifted out of the viewport. Ideal for releasing heavy references or pausing videos. |
 
 ## Re-exports
 
