@@ -32,6 +32,14 @@
     gap: 3rem;
   }
 
+  .logo-version {
+    font-size: 0.7rem;
+    font-weight: 500;
+    color: var(--color-slate-500);
+    line-height: 1;
+    align-self: center;
+  }
+
   .header-logo {
     display: flex;
     align-items: center;

@@ -141,10 +141,10 @@ listRef.current?.updateViewportHeight(800);
 
 To opt into the raw performance of Virtual Engine without React reconciliation overhead, your `renderItem` component MUST expose these methods via `useImperativeHandle`:
 
-| Method                                      | Description                                                            |
-| ------------------------------------------- | ---------------------------------------------------------------------- |
-| `update(item, index, cardIdx, rowEl, ...)`  | **Required.** Fired actively when the row's dataset changes or index shifts. Mutate the DOM safely inside this callback. |
-| `release()`                                 | **Optional.** Fired perfectly when a row is recycled or shifted out of the viewport. Ideal for releasing heavy references or pausing videos. |
+| Method                                     | Description                                                                                                                                  |
+| ------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `update(item, index, cardIdx, rowEl, ...)` | **Required.** Fired actively when the row's dataset changes or index shifts. Mutate the DOM safely inside this callback.                     |
+| `release()`                                | **Optional.** Fired perfectly when a row is recycled or shifted out of the viewport. Ideal for releasing heavy references or pausing videos. |
 
 ## Re-exports
 

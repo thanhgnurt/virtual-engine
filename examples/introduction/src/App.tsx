@@ -15,7 +15,7 @@ const App: React.FC = () => {
           <Route path="/" element={<HomePage />} />
           <Route path="/api" element={<ApiPage />} />
           <Route path="/quick-start" element={<QuickStartPage />} />
-          <Route path="/comparison" element={<ComparisonPage />} />
+          <Route path="/benchmarks" element={<ComparisonPage />} />
           <Route path="/coming-soon" element={<ComingSoonPage />} />
         </Routes>
       </MainLayout>

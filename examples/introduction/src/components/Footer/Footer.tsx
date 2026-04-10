@@ -21,7 +21,7 @@ export const Footer: React.FC = () => {
             <h4>Product</h4>
             <Link to="/">Home</Link>
             <Link to="/quick-start">Quick Start</Link>
-            <Link to="/comparison">Benchmarks</Link>
+            <Link to="/benchmarks">Benchmarks</Link>
           </div>
           <div className="link-group">
             <h4>Community</h4>

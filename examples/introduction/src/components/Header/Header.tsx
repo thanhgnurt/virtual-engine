@@ -31,6 +31,7 @@ export const Header: React.FC<HeaderProps> = () => {
           <Link to="/" className="header-logo">
             <div className="logo-box">VE</div>
             <span className="logo-text">Virtual Engine</span>
+            <span className="logo-version">v{__APP_VERSION__}</span>
           </Link>
         </div>
 
@@ -42,19 +43,14 @@ export const Header: React.FC<HeaderProps> = () => {
             API
           </Link>
           <Link
-            to="/comparison"
-            className={`nav-link ${location.pathname === "/comparison" ? "active" : ""}`}
+            to="/benchmarks"
+            className={`nav-link ${location.pathname === "/benchmarks" ? "active" : ""}`}
           >
             Benchmarks
           </Link>
         </nav>
 
         <div className="header-actions">
-          <div className="version-badge hide-mobile">
-            <div className="status-dot" />
-            <span className="version-text">v1.0.1 Stable</span>
-          </div>
-
           <a
             href="https://www.npmjs.com/package/react-virtual-engine"
             target="_blank"

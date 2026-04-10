@@ -5,6 +5,9 @@ export NVM_DIR="$HOME/.nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
 nvm use 22 > /dev/null 2>&1
 
+# Format all files before staging check
+npm run format --silent
+
 # Run lint-staged quietly to prevent VSCode from mistaking progress logs for errors
 npx lint-staged --quiet
 EXIT_CODE=$?

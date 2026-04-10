@@ -150,7 +150,7 @@ export const QuickStartPage: React.FC = () => {
             Now that you have the basic list running, you might want to:
           </p>
           <div className="steps-links">
-            <a href="/comparison" className="step-link secondary">
+            <a href="/benchmarks" className="step-link secondary">
               <span className="step-icon">📊</span>
               <div className="step-info">
                 <span className="step-name">View Benchmarks</span>

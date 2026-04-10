@@ -63,7 +63,7 @@ export const Sidebar: React.FC = () => {
     },
     {
       name: "Benchmarks",
-      path: "/comparison",
+      path: "/benchmarks",
       icon: (
         <svg
           className="w-5 h-5"

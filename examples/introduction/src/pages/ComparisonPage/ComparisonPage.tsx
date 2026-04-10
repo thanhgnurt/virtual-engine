@@ -184,7 +184,11 @@ export const ComparisonPage: React.FC = () => {
         {/* Virtual Engine Side */}
         <div className="engine-column">
           <div className="column-header">
-            <h3 className="column-title brand">Virtual Engine (Imperative)</h3>
+            <div className="column-title-group">
+              <h3 className="column-title brand">
+                Virtual Engine (Imperative)
+              </h3>
+            </div>
             <div className="version-badge">
               <div className="status-dot" />
               <span className="version-text">Optimized</span>
@@ -210,9 +214,19 @@ export const ComparisonPage: React.FC = () => {
         {/* React Window Side */}
         <div className="engine-column">
           <div className="column-header">
-            <h3 className="column-title fallback">
-              React Window (Declarative)
-            </h3>
+            <div className="column-title-group">
+              <h3 className="column-title fallback">
+                React Window (Declarative)
+              </h3>
+              <a
+                href="https://react-window.vercel.app/list/fixed-row-height"
+                target="_blank"
+                rel="noreferrer"
+                className="engine-explore-link"
+              >
+                Explore examples <span>↗</span>
+              </a>
+            </div>
             <div className="version-badge">
               <span className="version-text">Standard</span>
             </div>
