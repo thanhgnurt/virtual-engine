@@ -17,42 +17,42 @@ export const DYNAMIC_BUFFER_FAST_SCROLL = 10; // rows
 export const SCROLL_STOP_DELAY = 150; // ms
 
 export class VirtualEngine {
-  private totalCount: number;
-  private itemHeight: number;
-  private viewportHeight: number;
-  private buffer: number;
+  private _tc: number; // totalCount
+  private _ih: number; // itemHeight
+  private _vh: number; // viewportHeight
+  private _b: number;  // buffer
   // Pre-allocated range object reused across computeRange calls to avoid GC pressure
-  private _range: VirtualRange = { start: 0, end: 0 };
+  private _r: VirtualRange = { start: 0, end: 0 };
 
   constructor(options: EngineOptions) {
-    this.totalCount = options.totalCount;
-    this.itemHeight = options.itemHeight;
-    this.viewportHeight = options.viewportHeight;
-    this.buffer = options.buffer;
+    this._tc = options.totalCount;
+    this._ih = options.itemHeight;
+    this._vh = options.viewportHeight;
+    this._b = options.buffer;
   }
 
   updateOptions(options: Partial<EngineOptions>) {
-    if (options.totalCount !== undefined) this.totalCount = options.totalCount;
+    if (options.totalCount !== undefined) this._tc = options.totalCount;
     if (options.itemHeight !== undefined) {
-      this.itemHeight = options.itemHeight;
+      this._ih = options.itemHeight;
     }
     if (options.viewportHeight !== undefined)
-      this.viewportHeight = options.viewportHeight;
-    if (options.buffer !== undefined) this.buffer = options.buffer;
+      this._vh = options.viewportHeight;
+    if (options.buffer !== undefined) this._b = options.buffer;
   }
 
   computeRange(scrollTop: number, extraBuffer?: number): VirtualRange {
-    const buffer = extraBuffer ?? this.buffer;
-    const start = Math.floor(scrollTop / this.itemHeight);
-    const visibleCount = Math.ceil(this.viewportHeight / this.itemHeight);
+    const buffer = extraBuffer ?? this._b;
+    const start = (scrollTop / this._ih) | 0; // Bitwise floor
+    const visibleCount = Math.ceil(this._vh / this._ih);
 
-    this._range.start = Math.max(0, start - buffer);
-    this._range.end = Math.min(
-      this.totalCount - 1,
+    this._r.start = Math.max(0, start - buffer);
+    this._r.end = Math.min(
+      this._tc - 1,
       start + visibleCount + buffer,
     );
 
-    return this._range;
+    return this._r;
   }
 
   getSlotMap(
@@ -62,7 +62,7 @@ export class VirtualEngine {
   ): Int32Array {
     out.fill(-1, 0, poolSize);
     for (let i = range.start; i <= range.end; i++) {
-      if (i >= 0 && i < this.totalCount) {
+      if (i >= 0 && i < this._tc) {
         out[i % poolSize] = i;
       }
     }
@@ -80,10 +80,10 @@ export class VirtualEngine {
   getDynamicBuffer(velocity: number): number {
     return velocity > VELOCITY_THRESHOLD
       ? DYNAMIC_BUFFER_FAST_SCROLL
-      : this.buffer;
+      : this._b;
   }
 
   getTotalSize(paddingVertical: number = 0) {
-    return this.totalCount * this.itemHeight + paddingVertical * 2;
+    return this._tc * this._ih + paddingVertical * 2;
   }
 }

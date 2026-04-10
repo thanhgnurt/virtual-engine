@@ -1,6 +1,6 @@
 {
   "name": "virtual-engine",
-  "version": "1.0.10",
+  "version": "1.0.11",
   "description": "High-performance, zero-allocation computational core for the virtual-engine.",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
@@ -8,24 +8,9 @@
   "files": [
     "dist"
   ],
-  "scripts": {
-    "build": "tsup src/index.ts --format cjs,esm --dts --minify --clean",
-    "dev": "tsup src/index.ts --format cjs,esm --watch --dts"
-  },
-  "keywords": [
-    "virtualization",
-    "virtual-list",
-    "virtual-scroll",
-    "windowing",
-    "performance",
-    "rendering-engine",
-    "zero-allocation",
-    "dom-pooling",
-    "infinite-scroll",
-    "large-list"
-  ],
   "author": "Thanh Trung Le <thanhgnurt@gmail.com>",
   "license": "MIT",
+  "sideEffects": false,
   "homepage": "https://react-virtual-engine.vercel.app/",
   "repository": {
     "type": "git",
@@ -33,6 +18,10 @@
   },
   "bugs": {
     "url": "https://github.com/thanhgnurt/virtual-engine/issues"
+  },
+  "scripts": {
+    "build": "tsup src/index.ts --format cjs,esm --dts --minify --clean --splitting --treeshake",
+    "dev": "tsup src/index.ts --format cjs,esm --watch --dts"
   },
   "devDependencies": {
     "tsup": "^8.0.0",

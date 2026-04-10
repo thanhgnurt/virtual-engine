@@ -1,6 +1,17 @@
 import React, { memo, useState } from "react";
-import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
+import { PrismLight as SyntaxHighlighter } from "react-syntax-highlighter";
+import tsx from "react-syntax-highlighter/dist/esm/languages/prism/tsx";
+import typescript from "react-syntax-highlighter/dist/esm/languages/prism/typescript";
+import bash from "react-syntax-highlighter/dist/esm/languages/prism/bash";
+import scss from "react-syntax-highlighter/dist/esm/languages/prism/scss";
+import javascript from "react-syntax-highlighter/dist/esm/languages/prism/javascript";
 import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
+
+SyntaxHighlighter.registerLanguage("tsx", tsx);
+SyntaxHighlighter.registerLanguage("typescript", typescript);
+SyntaxHighlighter.registerLanguage("bash", bash);
+SyntaxHighlighter.registerLanguage("scss", scss);
+SyntaxHighlighter.registerLanguage("javascript", javascript);
 import "./CodeBlock.scss";
 
 const customStyle = { margin: 0, background: "transparent" };

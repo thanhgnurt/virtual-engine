@@ -21,6 +21,9 @@ export default defineConfig({
     strictPort: true,
     host: "localhost",
   },
+  esbuild: {
+    drop: ["console", "debugger"],
+  },
 
   css: {
     preprocessorOptions: {
@@ -43,5 +46,16 @@ export default defineConfig({
         "../../packages/core/src/index.ts",
       ),
     },
+  },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ["react", "react-dom", "react-router-dom"],
+          highlighter: ["react-syntax-highlighter"],
+        },
+      },
+    },
+    chunkSizeWarningLimit: 600,
   },
 });

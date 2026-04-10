@@ -64,12 +64,16 @@ export interface ReactVirtualEngineHandle {
 }
 
 const MAX_POOL = 256;
-const POOL_OVERHEAD = 22; // extra slots for buffer rows + fast-scroll dynamic buffer + safety margin
+const POOL_OVERHEAD = 22;
 
 const HIDDEN_TRANSFORM = "translate(0, -9999px)";
 const VISIBILITY_HIDDEN = "hidden";
 const VISIBILITY_VISIBLE = "visible";
 const TYPE_FUNCTION = "function";
+const ABSOLUTE = "absolute";
+const W_100 = "100%";
+const STRICT = "strict";
+const TRANSFORM = "transform";
 
 // ─────────────────────────────────────────────
 // ReactVirtualEngine
@@ -80,51 +84,50 @@ const ReactVirtualEngine = forwardRef(
     {
       version,
       items,
-      itemHeight,
-      height = 600,
-      width = "100%",
+      itemHeight: rowH,
+      height: viewH = 600,
+      width = W_100,
       bufferRow = 0,
       className,
       rowClass,
       style: externalStyle,
-      onScroll: externalOnScroll,
+      onScroll: onScrollEx,
       renderItem,
       role,
       cardIdx,
-      paddingVertical = 0,
+      paddingVertical: padY = 0,
     }: ReactVirtualEngineProps<T>,
     ref: React.ForwardedRef<ReactVirtualEngineHandle>,
   ) => {
     const containerRef = useRef<HTMLDivElement>(null);
-
-    const rafRef = useRef<number | null>(null);
+    const rafId = useRef<number | null>(null);
 
     const engine = useMemo(
       () =>
         new VirtualEngine({
           totalCount: items.length,
-          itemHeight,
-          viewportHeight: height,
+          itemHeight: rowH,
+          viewportHeight: viewH,
           buffer: bufferRow,
         }),
-      [itemHeight, height, bufferRow],
+      [rowH, viewH, bufferRow],
     );
 
     const styleHidden = useMemo(
       () => ({
-        position: "absolute",
+        position: ABSOLUTE,
         transform: HIDDEN_TRANSFORM,
         visibility: VISIBILITY_HIDDEN,
-        width: "100%",
-        contain: "strict",
-        height: itemHeight,
-        willChange: "transform",
+        width: W_100,
+        contain: STRICT,
+        height: rowH,
+        willChange: TRANSFORM,
       }),
-      [itemHeight],
+      [rowH],
     );
 
-    const [, _forceUpdate] = useReducer((v: number) => v + 1, 0);
-    const forceUpdate = useCallback(() => _forceUpdate(), []);
+    const [, _sync] = useReducer((v: number) => v + 1, 0);
+    const sync = useCallback(() => _sync(), []);
 
     const itemsRef = useRef(items);
     itemsRef.current = items;
@@ -133,12 +136,12 @@ const ReactVirtualEngine = forwardRef(
     versionRef.current = version;
 
     const rangeRef = useRef<VirtualRange>({ start: 0, end: 0 });
-    const isFirstRangeRef = useRef(true);
-    if (isFirstRangeRef.current) {
+    const initRange = useRef(true);
+    if (initRange.current) {
       const r = engine.computeRange(0);
       rangeRef.current.start = r.start;
       rangeRef.current.end = r.end;
-      isFirstRangeRef.current = false;
+      initRange.current = false;
     }
 
     const slotMapRef = useRef<Int32Array>(new Int32Array(MAX_POOL));
@@ -176,11 +179,11 @@ const ReactVirtualEngine = forwardRef(
     }, []);
 
     const poolSize = useMemo(
-      () => Math.min(Math.ceil(height / itemHeight) + POOL_OVERHEAD, MAX_POOL),
-      [height, itemHeight],
+      () => Math.min(Math.ceil(viewH / rowH) + POOL_OVERHEAD, MAX_POOL),
+      [viewH, rowH],
     );
 
-    const performUpdate = useCallback(
+    const updateUI = useCallback(
       (
         newRange?: VirtualRange,
         currentVersion?: number,
@@ -200,7 +203,7 @@ const ReactVirtualEngine = forwardRef(
         for (let s = 0; s < poolSize; s++) {
           const i = slotMap[s];
           const isOutOfRange = i === -1;
-          const top = isOutOfRange ? -9999 : i * itemHeight + paddingVertical;
+          const top = isOutOfRange ? -9999 : i * rowH + padY;
           const item = isOutOfRange ? null : its[i];
 
           const isChanged =
@@ -237,10 +240,10 @@ const ReactVirtualEngine = forwardRef(
             } | null;
             if (currentRef) {
               if (isOutOfRange) {
-                if (typeof currentRef.release === "function") {
+                if (typeof currentRef.release === TYPE_FUNCTION) {
                   currentRef.release();
                 }
-              } else if (typeof currentRef.update === "function") {
+              } else if (typeof currentRef.update === TYPE_FUNCTION) {
                 currentRef.update(
                   item,
                   i,
@@ -260,13 +263,13 @@ const ReactVirtualEngine = forwardRef(
               const initStyle = isOutOfRange
                 ? styleHidden
                 : {
-                    position: "absolute",
+                    position: ABSOLUTE,
                     transform: getTransform(top),
-                    width: "100%",
-                    height: itemHeight,
+                    width: W_100,
+                    height: rowH,
                     visibility: VISIBILITY_VISIBLE,
-                    contain: "strict",
-                    willChange: "transform",
+                    contain: STRICT,
+                    willChange: TRANSFORM,
                   };
 
               nodes[s] = (
@@ -314,8 +317,8 @@ const ReactVirtualEngine = forwardRef(
       [
         engine,
         poolSize,
-        itemHeight,
-        paddingVertical,
+        rowH,
+        padY,
         cardIdx,
         renderItem,
         rowClass,
@@ -324,10 +327,10 @@ const ReactVirtualEngine = forwardRef(
       ],
     );
 
-    const isFirstRenderHandleRef = useRef(true);
-    if (isFirstRenderHandleRef.current) {
-      performUpdate(rangeRef.current, versionRef.current, itemsRef.current);
-      isFirstRenderHandleRef.current = false;
+    const initHandle = useRef(true);
+    if (initHandle.current) {
+      updateUI(rangeRef.current, versionRef.current, itemsRef.current);
+      initHandle.current = false;
     }
 
     useEffect(() => {
@@ -335,22 +338,22 @@ const ReactVirtualEngine = forwardRef(
       const next = engine.computeRange(containerRef.current?.scrollTop ?? 0);
       rangeRef.current.start = next.start;
       rangeRef.current.end = next.end;
-      performUpdate(rangeRef.current);
-      forceUpdate();
+      updateUI(rangeRef.current);
+      sync();
     }, [
       items.length,
-      itemHeight,
-      height,
+      rowH,
+      viewH,
       bufferRow,
       engine,
-      performUpdate,
-      forceUpdate,
+      updateUI,
+      sync,
     ]);
 
     useEffect(() => {
-      performUpdate(rangeRef.current, version, items);
-      forceUpdate();
-    }, [items, version, poolSize, performUpdate, forceUpdate]);
+      updateUI(rangeRef.current, version, items);
+      sync();
+    }, [items, version, poolSize, updateUI, sync]);
 
     useImperativeHandle(
       ref,
@@ -368,34 +371,34 @@ const ReactVirtualEngine = forwardRef(
           rangeRef.current.start = next.start;
           rangeRef.current.end = next.end;
           if (
-            performUpdate(
+            updateUI(
               rangeRef.current,
               versionRef.current,
               newItems as ArrayLike<T>,
             )
           )
-            forceUpdate();
+            sync();
         },
         scrollToRow: ({ index, align = "auto", behavior = "auto" }) => {
           const el = containerRef.current;
           if (!el) return;
-          const itemTop = index * itemHeight + paddingVertical;
+          const itemTop = index * rowH + padY;
           let top: number;
           switch (align) {
             case "start":
               top = itemTop;
               break;
             case "end":
-              top = itemTop - height + itemHeight;
+              top = itemTop - viewH + rowH;
               break;
             case "center":
-              top = itemTop - height / 2 + itemHeight / 2;
+              top = itemTop - viewH / 2 + rowH / 2;
               break;
             default: {
               const isAbove = itemTop < el.scrollTop;
-              const isBelow = itemTop + itemHeight > el.scrollTop + height;
+              const isBelow = itemTop + rowH > el.scrollTop + viewH;
               if (!isAbove && !isBelow) return;
-              top = isAbove ? itemTop : itemTop - height + itemHeight;
+              top = isAbove ? itemTop : itemTop - viewH + rowH;
             }
           }
           el.scrollTo({
@@ -407,14 +410,14 @@ const ReactVirtualEngine = forwardRef(
           const el = containerRef.current;
           if (!el) return;
           el.scrollTop = scrollTop;
-          if (rafRef.current !== null) {
-            cancelAnimationFrame(rafRef.current);
-            rafRef.current = null;
+          if (rafId.current !== null) {
+            cancelAnimationFrame(rafId.current);
+            rafId.current = null;
           }
           const next = engine.computeRange(scrollTop);
           rangeRef.current.start = next.start;
           rangeRef.current.end = next.end;
-          if (performUpdate(rangeRef.current)) forceUpdate();
+          if (updateUI(rangeRef.current)) sync();
         },
         snapshotScroll: () => {},
         restoreScroll: () => {},
@@ -425,65 +428,65 @@ const ReactVirtualEngine = forwardRef(
           );
           rangeRef.current.start = next.start;
           rangeRef.current.end = next.end;
-          if (performUpdate(rangeRef.current)) forceUpdate();
+          if (updateUI(rangeRef.current)) sync();
         },
       }),
-      [engine, itemHeight, height, paddingVertical, performUpdate, forceUpdate],
+      [engine, rowH, viewH, padY, updateUI, sync],
     );
 
-    const lastKnownScrollTopRef = useRef(0);
-    const lastScrollTimeRef = useRef(0);
-    const lastUpdateTimestampRef = useRef(0);
-    const lastVelocityRef = useRef(0);
+    const prevScrollTop = useRef(0);
+    const prevScrollTime = useRef(0);
+    const prevTS = useRef(0);
+    const prevV = useRef(0);
 
     const propsRef = useRef({
-      externalOnScroll,
+      onScrollEx,
       cardIdx,
-      paddingVertical,
-      itemHeight,
-      height,
-      performUpdate,
-      forceUpdate,
+      padY,
+      rowH,
+      viewH,
+      updateUI,
+      sync,
     });
     propsRef.current = {
-      externalOnScroll,
+      onScrollEx,
       cardIdx,
-      paddingVertical,
-      itemHeight,
-      height,
-      performUpdate,
-      forceUpdate,
+      padY,
+      rowH,
+      viewH,
+      updateUI,
+      sync,
     };
 
     useLayoutEffect(() => {
       const el = containerRef.current;
       if (!el) return;
 
-      const performRafUpdate = () => {
+      const onRafUpdate = () => {
         const currentTop = el.scrollTop;
-        const { externalOnScroll, performUpdate, forceUpdate } =
+        const { onScrollEx, updateUI, sync } =
           propsRef.current;
 
-        if (externalOnScroll) externalOnScroll(currentTop);
+        if (onScrollEx) onScrollEx(currentTop);
 
         const now = performance.now();
-        const dt = now - lastUpdateTimestampRef.current;
+        const dt = now - prevTS.current;
         let velocity = 0;
 
         if (dt > 0 && dt < 100) {
           const instantVelocity = engine.calculateVelocity(
             currentTop,
-            lastKnownScrollTopRef.current,
+            prevScrollTop.current,
             dt,
           );
-          velocity = instantVelocity * 0.7 + lastVelocityRef.current * 0.3;
+          velocity = instantVelocity * 0.7 + prevV.current * 0.3;
         } else {
-          velocity = lastVelocityRef.current;
+          velocity = prevV.current;
         }
 
-        lastKnownScrollTopRef.current = currentTop;
-        lastUpdateTimestampRef.current = now;
-        lastVelocityRef.current = velocity;
+        prevScrollTop.current = currentTop;
+        prevTS.current = now;
+        prevV.current = velocity;
 
         const extraBuffer = engine.getDynamicBuffer(velocity);
         const currentRange = rangeRef.current;
@@ -494,14 +497,14 @@ const ReactVirtualEngine = forwardRef(
         if (currentRange.start !== nextStart || currentRange.end !== nextEnd) {
           currentRange.start = nextStart;
           currentRange.end = nextEnd;
-          if (performUpdate(currentRange)) forceUpdate();
+          if (updateUI(currentRange)) sync();
         }
 
-        if (now - lastScrollTimeRef.current < SCROLL_STOP_DELAY) {
-          rafRef.current = requestAnimationFrame(performRafUpdate);
+        if (now - prevScrollTime.current < SCROLL_STOP_DELAY) {
+          rafId.current = requestAnimationFrame(onRafUpdate);
         } else {
-          rafRef.current = null;
-          lastVelocityRef.current = 0;
+          rafId.current = null;
+          prevV.current = 0;
           const finalNext = engine.computeRange(currentTop);
           if (
             currentRange.start !== finalNext.start ||
@@ -509,26 +512,26 @@ const ReactVirtualEngine = forwardRef(
           ) {
             currentRange.start = finalNext.start;
             currentRange.end = finalNext.end;
-            if (performUpdate(currentRange)) forceUpdate();
+            if (updateUI(currentRange)) sync();
           }
         }
       };
 
       const onNativeScroll = () => {
         const now = performance.now();
-        lastScrollTimeRef.current = now;
-        if (rafRef.current === null) {
-          lastUpdateTimestampRef.current = now;
-          rafRef.current = requestAnimationFrame(performRafUpdate);
+        prevScrollTime.current = now;
+        if (rafId.current === null) {
+          prevTS.current = now;
+          rafId.current = requestAnimationFrame(onRafUpdate);
         }
       };
 
       el.addEventListener("scroll", onNativeScroll, { passive: true });
       return () => {
         el.removeEventListener("scroll", onNativeScroll);
-        if (rafRef.current !== null) {
-          cancelAnimationFrame(rafRef.current);
-          rafRef.current = null;
+        if (rafId.current !== null) {
+          cancelAnimationFrame(rafId.current);
+          rafId.current = null;
         }
       };
     }, [engine]);
@@ -537,7 +540,7 @@ const ReactVirtualEngine = forwardRef(
       <div
         ref={containerRef}
         style={{
-          height,
+          height: viewH,
           width,
           overflow: "auto",
           overflowX: "hidden",
@@ -549,8 +552,8 @@ const ReactVirtualEngine = forwardRef(
       >
         <div
           style={{
-            height: engine.getTotalSize(paddingVertical),
-            width: "100%",
+            height: engine.getTotalSize(padY),
+            width: W_100,
             position: "relative",
           }}
         >

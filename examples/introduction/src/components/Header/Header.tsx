@@ -22,13 +22,21 @@ export const Header: React.FC<HeaderProps> = () => {
     return () => mainWrapper?.removeEventListener("scroll", handleScroll);
   }, []);
 
+  const handleLogoClick = (e: React.MouseEvent) => {
+    if (isHomePage) {
+      e.preventDefault();
+      const mainWrapper = document.querySelector(".main-wrapper");
+      mainWrapper?.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  };
+
   return (
     <header
       className={`dashboard-header ${scrolled || !isHomePage ? "is-scrolled" : ""} ${isHomePage ? "is-home" : ""}`}
     >
       <div className="header-container">
         <div className="header-left">
-          <Link to="/" className="header-logo">
+          <Link to="/" className="header-logo" onClick={handleLogoClick}>
             <div className="logo-box">
               <svg
                 width="24"
