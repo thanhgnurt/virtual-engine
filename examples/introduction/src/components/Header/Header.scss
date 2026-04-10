@@ -50,9 +50,7 @@
     color: #fff;
 
     .logo-box {
-      background-image: url("/hero-bg.png");
-      background-size: 350% 350%;
-      background-position: 75% 30%;
+      background-color: #0c1222; // Slightly lighter than pure background for contrast
       width: 2.125rem;
       height: 2.125rem;
       display: flex;
@@ -61,48 +59,46 @@
       border-radius: 0.625rem;
       position: relative;
       overflow: hidden;
-      box-shadow: 0 0 15px rgba(0, 212, 255, 0.25);
-      filter: saturate(1.2) brightness(0.9);
+      box-shadow: 
+        0 4px 12px rgba(0, 0, 0, 0.3),
+        inset 0 0 10px rgba(255, 255, 255, 0.02);
 
-      .logo-slots {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 0.15rem;
-        width: 100%;
+      .logo-svg {
+        color: var(--color-brand-400);
+        width: 1.25rem;
+        height: 1.25rem;
         position: relative;
         z-index: 2;
 
-        .slot.mini {
-          height: 0.125rem;
-          width: 0.875rem;
-          background-color: rgba(255, 255, 255, 0.2);
-          border-radius: 1px;
+        .bracket {
+          color: var(--color-slate-500);
+          opacity: 0.8;
+          stroke-width: 1.5;
         }
 
-        .logo-ve {
-          color: #fff;
-          font-size: 1rem;
-          font-weight: 900;
-          letter-spacing: -0.02em;
-          text-shadow: 0 0 10px rgba(0, 212, 255, 0.4);
-          line-height: 1;
-          padding: 0.05rem 0;
+        .row-slot {
+          &.s1, &.s5 { opacity: 0.4; }
+          &.s2, &.s4 { opacity: 0.7; }
+          &.s3 { 
+            opacity: 1; 
+            color: #00d4ff; 
+            filter: drop-shadow(0 0 4px rgba(0, 212, 255, 0.6));
+          }
         }
       }
 
+      // Premium glass finish
       &::before {
         content: "";
         position: absolute;
         inset: 0;
         background: linear-gradient(
           135deg,
-          rgba(255, 255, 255, 0.2) 0%,
-          rgba(255, 255, 255, 0) 50%,
-          rgba(0, 0, 0, 0.1) 100%
+          rgba(255, 255, 255, 0.08) 0%,
+          rgba(255, 255, 255, 0) 60%
         );
-        z-index: 1;
         pointer-events: none;
+        z-index: 3;
       }
     }
 

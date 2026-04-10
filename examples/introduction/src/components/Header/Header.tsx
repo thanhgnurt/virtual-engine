@@ -30,11 +30,38 @@ export const Header: React.FC<HeaderProps> = () => {
         <div className="header-left">
           <Link to="/" className="header-logo">
             <div className="logo-box">
-              <div className="logo-slots">
-                <span className="slot mini" />
-                <span className="logo-ve">VE</span>
-                <span className="slot mini" />
-              </div>
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+                className="logo-svg"
+              >
+                {/* Curly Brackets */}
+                <path
+                  d="M7 4c0 0-3 0-3 3s2 4 2 5-2 2-2 5 3 3 3 3"
+                  className="bracket"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                />
+                <path
+                  d="M17 4c0 0 3 0 3 3s-2 4-2 5 2 2 2 5-3 3-3 3"
+                  className="bracket"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                />
+                {/* Staircase V - Left Side */}
+                <rect x="8" y="7" width="3.5" height="1.5" rx="0.75" fill="currentColor" className="row-slot s1" />
+                <rect x="9.5" y="10.5" width="3.5" height="1.5" rx="0.75" fill="currentColor" className="row-slot s2" />
+                {/* Staircase V - Bottom */}
+                <rect x="11.25" y="14" width="1.5" height="1.5" rx="0.75" fill="currentColor" className="row-slot s3" />
+                {/* Staircase V - Right Side */}
+                <rect x="11" y="10.5" width="3.5" height="1.5" rx="0.75" fill="currentColor" className="row-slot s4" />
+                <rect x="12.5" y="7" width="3.5" height="1.5" rx="0.75" fill="currentColor" className="row-slot s5" />
+              </svg>
             </div>
             <span className="logo-text">Virtual Engine</span>
             <span className="logo-version">v{__APP_VERSION__}</span>

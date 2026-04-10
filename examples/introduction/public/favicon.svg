@@ -1,21 +1,15 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="32" height="32">
-  <defs>
-    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#5b21b6" />
-      <stop offset="60%" stop-color="#0e7490" />
-      <stop offset="100%" stop-color="#00d4ff" />
-    </linearGradient>
-  </defs>
+  <!-- Background -->
+  <rect x="0" y="0" width="24" height="24" rx="6" fill="#0a0f1e" />
   
-  <!-- Background Box -->
-  <rect x="0" y="0" width="24" height="24" rx="6" fill="url(#bg)" />
+  <!-- Brackets -->
+  <path d="M7 4c0 0-3 0-3 3s2 4 2 5-2 2-2 5 3 3 3 3" stroke="#64748b" stroke-width="2.5" stroke-linecap="round" fill="none" />
+  <path d="M17 4c0 0 3 0 3 3s-2 4-2 5 2 2 2 5-3 3-3 3" stroke="#64748b" stroke-width="2.5" stroke-linecap="round" fill="none" />
   
-  <!-- Top Slot -->
-  <rect x="6" y="5.5" width="12" height="1.5" rx="0.75" fill="white" opacity="0.25" />
-  
-  <!-- "VE" Text -->
-  <text x="12" y="14.5" font-family="Outfit, Arial, sans-serif" font-size="8" font-weight="900" fill="white" text-anchor="middle" letter-spacing="-0.02em">VE</text>
-  
-  <!-- Bottom Slot -->
-  <rect x="6" y="17.5" width="12" height="1.5" rx="0.75" fill="white" opacity="0.25" />
+  <!-- Staircase V -->
+  <rect x="8" y="7" width="4" height="2" rx="1" fill="#38bdf8" opacity="0.5" />
+  <rect x="9.5" y="10.5" width="4" height="2" rx="1" fill="#38bdf8" opacity="0.8" />
+  <rect x="11" y="14" width="2" height="2" rx="1" fill="#00d4ff" />
+  <rect x="10.5" y="10.5" width="4" height="2" rx="1" fill="#38bdf8" opacity="0.8" />
+  <rect x="12" y="7" width="4" height="2" rx="1" fill="#38bdf8" opacity="0.5" />
 </svg>
