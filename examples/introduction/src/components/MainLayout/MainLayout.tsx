@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from "react";
 import { useLocation } from "react-router-dom";
 import { Sidebar } from "../Sidebar";
 import { Header } from "../Header";
+import { ScrollToTop } from "../ScrollToTop/ScrollToTop";
 import "./MainLayout.scss";
 
 interface MainLayoutProps {
@@ -31,6 +32,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
           <main className="main-content">{children}</main>
         </div>
       </div>
+      <ScrollToTop />
     </div>
   );
 };
