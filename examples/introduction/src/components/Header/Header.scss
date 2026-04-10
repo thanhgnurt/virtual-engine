@@ -50,7 +50,12 @@
     color: #fff;
 
     .logo-box {
-      background: var(--color-brand-500);
+      background: linear-gradient(
+        120deg,
+        #5b21b6 0%,
+        #0e7490 55%,
+        #00d4ff 100%
+      );
       color: #fff;
       width: 2rem;
       height: 2rem;
@@ -60,7 +65,9 @@
       border-radius: 0.5rem;
       font-size: 0.75rem;
       font-weight: 900;
-      box-shadow: 0 0 15px rgba(var(--brand-500-rgb), 0.3);
+      box-shadow:
+        0 0 12px rgba(0, 212, 255, 0.3),
+        0 0 24px rgba(91, 33, 182, 0.2);
     }
 
     .logo-text {

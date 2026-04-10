@@ -1,5 +1,5 @@
 import React from "react";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { ComparisonPage } from "./pages/ComparisonPage";
 import { HomePage } from "./pages/HomePage";
 import { ComingSoonPage } from "./pages/ComingSoonPage";
@@ -17,6 +17,7 @@ const App: React.FC = () => {
           <Route path="/quick-start" element={<QuickStartPage />} />
           <Route path="/benchmarks" element={<ComparisonPage />} />
           <Route path="/coming-soon" element={<ComingSoonPage />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </MainLayout>
     </BrowserRouter>

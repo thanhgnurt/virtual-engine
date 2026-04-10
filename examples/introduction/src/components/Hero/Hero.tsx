@@ -26,7 +26,9 @@ export const Hero: React.FC<HeroProps> = ({ activeFramework = "React" }) => {
       <h1 className="hero-title">
         Next-Gen <span className="highlight">Virtualization</span> Core
         <br />
-        <span className="fw-dependent-text">for {activeFramework}</span>
+        <span key={activeFramework} className="fw-dependent-text">
+          for {activeFramework}
+        </span>
       </h1>
       <p className="hero-subtitle">
         A specialized, zero-allocation engine designed for extreme scale and

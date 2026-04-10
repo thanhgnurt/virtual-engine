@@ -95,4 +95,22 @@
       }
     }
   }
+  .fw-dependent-text {
+    display: block;
+    margin-top: 0.5rem;
+    animation: fw-slide-up 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+    font-size: 3.5rem;
+    opacity: 1;
+  }
+}
+
+@keyframes fw-slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }

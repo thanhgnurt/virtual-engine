@@ -16,11 +16,13 @@ export const HomePage: React.FC = () => {
 
   return (
     <div className="home-page">
-      <Hero activeFramework={hoveredFramework} />
-      <FrameworkSelector
-        onHover={(name) => setHoveredFramework(name)}
-        onLeave={() => setHoveredFramework("React")}
-      />
+      <div className="home-hero-bg">
+        <Hero activeFramework={hoveredFramework} />
+        <FrameworkSelector
+          onHover={(name) => setHoveredFramework(name)}
+          onLeave={() => setHoveredFramework("React")}
+        />
+      </div>
 
       <section className="home-demo-section">
         <div className="section-container">
