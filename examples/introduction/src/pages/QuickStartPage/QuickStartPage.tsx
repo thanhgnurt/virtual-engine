@@ -151,7 +151,22 @@ export const QuickStartPage: React.FC = () => {
           </p>
           <div className="steps-links">
             <a href="/benchmarks" className="step-link secondary">
-              <span className="step-icon">📊</span>
+              <span className="step-icon">
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M12 20V10" />
+                  <path d="M18 20V4" />
+                  <path d="M6 20v-4" />
+                </svg>
+              </span>
               <div className="step-info">
                 <span className="step-name">View Benchmarks</span>
                 <span className="step-note">
@@ -165,7 +180,20 @@ export const QuickStartPage: React.FC = () => {
               rel="noreferrer"
               className="step-link secondary"
             >
-              <span className="step-icon">⭐</span>
+              <span className="step-icon">
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                </svg>
+              </span>
               <div className="step-info">
                 <span className="step-name">Star on GitHub</span>
                 <span className="step-note">

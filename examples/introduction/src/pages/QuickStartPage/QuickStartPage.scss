@@ -120,7 +120,24 @@
       }
 
       .step-icon {
-        font-size: 1.75rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 2.5rem;
+        height: 2.5rem;
+        border-radius: 0.75rem;
+        background-color: rgba(255, 255, 255, 0.03);
+        flex-shrink: 0;
+
+        svg {
+          color: var(--color-brand-400);
+          filter: drop-shadow(0 0 8px rgba(var(--brand-400-rgb), 0.3));
+        }
+      }
+
+      &:last-child .step-icon svg {
+        color: #fbbf24; // Amber for star
+        filter: drop-shadow(0 0 8px rgba(251, 191, 36, 0.3));
       }
 
       .step-info {
