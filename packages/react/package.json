@@ -1,6 +1,6 @@
 {
   "name": "react-virtual-engine",
-  "version": "1.0.8",
+  "version": "1.0.10",
   "description": "React components and hooks for the high-performance virtual-engine.",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
@@ -39,7 +39,7 @@
     "react-dom": ">=16.8.0"
   },
   "dependencies": {
-    "virtual-engine": "^1.0.8"
+    "virtual-engine": "^1.0.10"
   },
   "devDependencies": {
     "@types/react": "^18.0.0",

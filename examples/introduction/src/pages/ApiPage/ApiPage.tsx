@@ -1,5 +1,6 @@
 import React from "react";
 import { CodeBlock } from "../../components/CodeBlock";
+import { useSEO } from "../../hooks";
 import "./ApiPage.scss";
 
 const propsCode = `export interface ReactVirtualEngineProps<T> {
@@ -59,9 +60,16 @@ const rowHandleCode = `export interface IVirtualRowHandle<T = unknown> {
     isLast?: boolean,
     isFirst?: boolean,
   ) => void;
+  release?: () => void;
 }`;
 
 export const ApiPage: React.FC = () => {
+  useSEO({
+    title: "API Reference",
+    description:
+      "Comprehensive documentation of the ReactVirtualEngine interfaces, props, and expose ref methods.",
+  });
+
   return (
     <div className="api-page">
       <div className="page-header">

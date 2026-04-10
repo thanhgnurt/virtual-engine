@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { ReactVirtualEngine } from "react-virtual-engine";
-import { VirtualRow, VirtualRowData } from "../VirtualRow";
+import { FastRow, FastRowData } from "../FastRow";
 import { ROW_HEIGH } from "../../constants";
 import "./TradingUniverseSimulator.scss";
 
@@ -38,11 +38,7 @@ export const TradingUniverseSimulator: React.FC = () => {
           className="ve-scrollbar"
           rowClass="virtual-row-item"
           renderItem={(item: unknown, index: number) => (
-            <VirtualRow
-              key={index}
-              index={index}
-              data={item as VirtualRowData}
-            />
+            <FastRow key={index} index={index} data={item as FastRowData} />
           )}
         />
       </div>

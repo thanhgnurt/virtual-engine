@@ -26,6 +26,7 @@ export interface IVirtualRowHandle<T = unknown> {
     isLast?: boolean,
     isFirst?: boolean,
   ) => void;
+  release?: () => void;
 }
 
 export interface ReactVirtualEngineProps<T> {
@@ -232,17 +233,24 @@ const ReactVirtualEngine = forwardRef(
 
             const currentRef = refs[s] as {
               update?: (...args: unknown[]) => void;
+              release?: () => void;
             } | null;
-            if (currentRef && typeof currentRef.update === "function") {
-              currentRef.update(
-                item,
-                i,
-                cardIdx ?? -1,
-                wrapper,
-                ver,
-                i === its.length - 1,
-                i === 0,
-              );
+            if (currentRef) {
+              if (isOutOfRange) {
+                if (typeof currentRef.release === "function") {
+                  currentRef.release();
+                }
+              } else if (typeof currentRef.update === "function") {
+                currentRef.update(
+                  item,
+                  i,
+                  cardIdx ?? -1,
+                  wrapper,
+                  ver,
+                  i === its.length - 1,
+                  i === 0,
+                );
+              }
               lastIdsRef.current[s] = item;
               lastVersionsRef.current[s] = ver;
               lastIndicesRef.current[s] = i;

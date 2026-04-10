@@ -1,6 +1,7 @@
 import React from "react";
 import { ReactVirtualEngine } from "react-virtual-engine";
 import { CodeBlock } from "../../components/CodeBlock";
+import { useSEO } from "../../hooks";
 import "./QuickStartPage.scss";
 
 const installCode = `npm install react-virtual-engine`;
@@ -72,6 +73,12 @@ function MyList() {
 }`;
 
 export const QuickStartPage: React.FC = () => {
+  useSEO({
+    title: "Quick Start",
+    description:
+      "Learn how to easily install and implement React Virtual Engine with step-by-step guides for both standard React usage and extreme-scale zero-allocation patterns.",
+  });
+
   return (
     <div className="quick-start-page">
       <div className="page-header">

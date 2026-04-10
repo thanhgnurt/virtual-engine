@@ -2,66 +2,103 @@ import React, { memo, useMemo, useState } from "react";
 import { ReactVirtualEngine } from "react-virtual-engine";
 import { CodeBlock } from "../../components/CodeBlock";
 import { ReactWindowList } from "../../components/ReactWindowList";
+import { useSEO } from "../../hooks";
 
-import { VirtualRow, VirtualRowData } from "../../components/VirtualRow";
+import { FastRow, FastRowData } from "../../components/FastRow";
 import { ROW_HEIGH } from "../../constants";
 import "./ComparisonPage.scss";
 
-const veCode = `// 1. Imperative Row Update Logic
-const VirtualRow = forwardRef(({ index, data }, ref) => {
-  const priceRef = useRef(null);
+const veCode = `// 1. FastRow.tsx
+export const FastRow = memo(
+  forwardRef<IVirtualRowHandle<FastRowData>, FastRowProps>(
+    ({ index: initialIndex, data: initialData }, ref) => {
+      const indexRef = useRef<HTMLSpanElement>(null);
+      const nameRef = useRef<HTMLSpanElement>(null);
+      const priceRef = useRef<HTMLSpanElement>(null);
 
-  useImperativeHandle(ref, () => ({
-    update: (data, index) => {
-      // Engine handles wrapper div positioning automatically
-      // Direct DOM Text Mutation
-      setTextNode(priceRef.current, \`$\${data.price}\`);
+      // Store current data references
+      const itemRef = useRef<FastRowData>(initialData);
+      const indexValueRef = useRef(initialIndex);
+
+      useImperativeHandle(ref, () => ({
+        update: (data, index) => {
+          // Identify changes
+          const indexChanged = index !== indexValueRef.current;
+          const itemChanged = data?.id !== itemRef.current?.id;
+
+          if (indexChanged || itemChanged) {
+            indexValueRef.current = index;
+            itemRef.current = data;
+
+            // Zero-allocation text mutation
+            if (indexRef.current) setTextNode(indexRef.current, \`#\${index}\`);
+            if (nameRef.current) setTextNode(nameRef.current, data.name);
+            if (priceRef.current) setTextNode(priceRef.current, \`$\${data.price.toFixed(2)}\`);
+          }
+        },
+      }));
+
+      return (
+        <>
+          <div className="row-left">
+            <span ref={indexRef} className="row-index">#{initialIndex}</span>
+            <span ref={nameRef} className="row-name">{initialData?.name}</span>
+          </div>
+          <div className="row-right">
+            <span ref={priceRef} className="row-price">\${initialData?.price.toFixed(2)}</span>
+          </div>
+        </>
+      );
     }
-  }));
+  )
+);
 
-  return (
-    <div>
-      <span ref={priceRef}>{data.price}</span>
-    </div>
-  );
-});
-
-// 2. Virtual List Mount
+// 2. Virtual Engine Mount
 <ReactVirtualEngine
   items={items}
-  itemHeight={44}
+  itemHeight={ROW_HEIGH}
   height={600}
-  bufferRow={5}
-  rowClass="pl-6 pr-10 py-2 border-b border-white/5 flex items-center justify-between hover:bg-slate-800/20"
-  renderItem={(item, index) => (
-    <VirtualRow
-      key={index}
-      index={index}
-      data={item}
-    />
-  )}
+  rowClass="virtual-row-item"
+  renderItem={renderItem}
 />`;
 
-const rwCode = `// 1. Declarative Row Render Logic
-function RowComponent({ index, items, style }) {
-  const item = items[index];
+const rwCode = `// 1. RowComponent for React Window
+const RowComponent = memo(
+  ({ index, items, style }: RowProps) => {
+    const item = items[index];
+    if (!item) return null;
 
-  // React Re-renders component on every scroll tick
-  // generating new Virtual DOM allocation.
-  return (
-    <div style={style}>
-      <span>{item.price}</span>
-    </div>
-  );
-}
+    // React Re-renders this active component
+    // only when the style or index actively shifts.
+    return (
+      <div style={style} className="rw-row">
+        <div className="row-left">
+          <span className="row-index">#{index}</span>
+          <span className="row-name">{item.name}</span>
+        </div>
+        <div className="row-right">
+          <span className="row-price">\${item.price.toFixed(2)}</span>
+          <span className="row-change">
+            {item.change.toFixed(2)}%
+          </span>
+        </div>
+      </div>
+    );
+  },
+  (prev, next) =>
+    prev.index === next.index &&
+    prev.style === next.style &&
+    prev.items[prev.index] === next.items[next.index]
+);
 
 // 2. React Window List Mount
 <List
   rowComponent={RowComponent}
   rowCount={items.length}
-  rowHeight={44}
+  rowHeight={ROW_HEIGH}
   rowProps={{ items }}
   style={{ height: 600, width: "100%" }}
+  className="ve-scrollbar"
 />`;
 
 const ITEM_COUNT = 100000;
@@ -111,6 +148,12 @@ const BenchmarkNotes = memo(() => (
 ));
 
 export const ComparisonPage: React.FC = () => {
+  useSEO({
+    title: "Benchmarks",
+    description:
+      "Live performance benchmarks comparing React Virtual Engine directly against React Window with 100,000 updating trading rows.",
+  });
+
   const [items] = useState(() =>
     Array.from({ length: ITEM_COUNT }, (_, i) => ({
       id: i,
@@ -122,7 +165,7 @@ export const ComparisonPage: React.FC = () => {
 
   const renderItem = useMemo(
     () => (item: unknown, index: number) => (
-      <VirtualRow key={index} index={index} data={item as VirtualRowData} />
+      <FastRow key={index} index={index} data={item as FastRowData} />
     ),
     [],
   );

@@ -1,28 +1,28 @@
 import { forwardRef, memo, useImperativeHandle, useRef } from "react";
 import { setTextNode, type IVirtualRowHandle } from "react-virtual-engine";
-import "./VirtualRow.scss";
+import "./FastRow.scss";
 
-export interface VirtualRowData {
+export interface FastRowData {
   id: number;
   name: string;
   price: number;
   change: number;
 }
 
-export interface VirtualRowProps {
+export interface FastRowProps {
   index: number;
-  data: VirtualRowData;
+  data: FastRowData;
 }
 
-export const VirtualRow = memo(
-  forwardRef<IVirtualRowHandle<VirtualRowData | null>, VirtualRowProps>(
+export const FastRow = memo(
+  forwardRef<IVirtualRowHandle<FastRowData>, FastRowProps>(
     ({ index: initialIndex, data: initialData }, ref) => {
       const indexRef = useRef<HTMLSpanElement>(null);
       const nameRef = useRef<HTMLSpanElement>(null);
       const priceRef = useRef<HTMLSpanElement>(null);
       const changeRef = useRef<HTMLSpanElement>(null);
 
-      const itemRef = useRef<VirtualRowData | null>(initialData);
+      const itemRef = useRef<FastRowData>(initialData);
       const indexValueRef = useRef(initialIndex);
 
       useImperativeHandle(ref, () => ({
@@ -33,10 +33,6 @@ export const VirtualRow = memo(
           if (indexChanged || itemChanged) {
             indexValueRef.current = index;
             itemRef.current = data;
-
-            if (!data) {
-              return;
-            }
 
             if (indexRef.current) setTextNode(indexRef.current, `#${index}`);
             if (nameRef.current) setTextNode(nameRef.current, data.name);
@@ -84,4 +80,4 @@ export const VirtualRow = memo(
   ),
 );
 
-VirtualRow.displayName = "VirtualRow";
+FastRow.displayName = "FastRow";
