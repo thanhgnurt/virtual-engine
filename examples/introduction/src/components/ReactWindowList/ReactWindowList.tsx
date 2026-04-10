@@ -3,13 +3,13 @@ import { List, type RowComponentProps } from "react-window";
 import "./ReactWindowList.scss";
 
 export interface ReactWindowListProps {
-  items: { id: number; name: string; price: number; change: number }[];
+  items: { id: number; name: string; price: number; change: number; val: number }[];
   itemHeight: number;
   height: number;
 }
 
 type RowProps = RowComponentProps<{
-  items: { id: number; name: string; price: number; change: number }[];
+  items: { id: number; name: string; price: number; change: number; val: number }[];
 }>;
 
 const RowComponent = memo(
@@ -24,6 +24,9 @@ const RowComponent = memo(
           <span className="row-name">{item.name}</span>
         </div>
         <div className="row-right">
+          <span className="row-val">
+            {item.val.toLocaleString()}
+          </span>
           <span className="row-price">${item.price.toFixed(2)}</span>
           <span
             className={`row-change ${item.change >= 0 ? "positive" : "negative"}`}

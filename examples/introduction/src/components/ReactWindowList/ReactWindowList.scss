@@ -1,5 +1,5 @@
 .rw-row {
-  padding: 0 1.5rem;
+  padding: 0 0.5rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -13,11 +13,61 @@
   .row-left {
     display: flex;
     align-items: center;
-    gap: 1rem;
+    gap: 1.5rem;
+    flex: 1;
+    min-width: 0;
+
+    .row-index {
+      color: var(--color-slate-500);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 0.875rem;
+      width: 4.5rem;
+      text-align: left;
+      flex-shrink: 0;
+    }
+
+    .row-name {
+      color: var(--color-slate-200);
+      font-weight: 500;
+      text-align: left;
+    }
   }
 
   .row-right {
     display: flex;
-    gap: 2rem;
+    align-items: center;
+    gap: 1.5rem;
+    min-width: 320px;
+    justify-content: flex-end;
+
+    .row-val {
+      color: var(--color-slate-500);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 0.8rem;
+      min-width: 80px;
+      text-align: right;
+    }
+
+    .row-price {
+      color: var(--color-brand-400);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      min-width: 100px;
+      text-align: right;
+    }
+
+    .row-change {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 0.875rem;
+      min-width: 90px;
+      text-align: right;
+
+      &.positive {
+        color: var(--color-emerald-400);
+      }
+
+      &.negative {
+        color: var(--color-rose-400);
+      }
+    }
   }
 }

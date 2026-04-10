@@ -1,4 +1,4 @@
-import React, { memo, useMemo, useState } from "react";
+import React, { memo, useMemo, useRef, useState } from "react";
 import { ReactVirtualEngine } from "react-virtual-engine";
 import { CodeBlock } from "../../components/CodeBlock";
 import { ReactWindowList } from "../../components/ReactWindowList";
@@ -7,6 +7,15 @@ import { useSEO } from "../../hooks";
 import { FastRow, FastRowData } from "../../components/FastRow";
 import { ROW_HEIGH } from "../../constants";
 import "./ComparisonPage.scss";
+
+// Pre-calculated pools for zero-overhead streaming
+const POOL_SIZE = 20000;
+const DELTA_POOL = Array.from({ length: POOL_SIZE }, () => ({
+  price: (Math.random() - 0.5) * 10,
+  change: (Math.random() - 0.5) * 2,
+}));
+
+const ITEM_COUNT_OPTIONS = [10000, 100000, 500000, 1000000];
 
 const veCode = `// 1. FastRow.tsx
 export const FastRow = memo(
@@ -101,8 +110,6 @@ const RowComponent = memo(
   className="ve-scrollbar"
 />`;
 
-const ITEM_COUNT = 100000;
-
 const VECodeSection = memo(() => (
   <div className="code-section">
     <div className="code-header">Implementation Code</div>
@@ -148,26 +155,103 @@ const BenchmarkNotes = memo(() => (
 ));
 
 export const ComparisonPage: React.FC = () => {
+  const [totalItems, setTotalItems] = useState(100000);
+
+  const items = useMemo(() =>
+    Array.from({ length: totalItems }, (_, i) => ({
+      id: i,
+      name: `S-${i}`,
+      price: Math.random() * 1000 + 100,
+      change: (Math.random() - 0.5) * 5,
+      val: Math.floor(Math.random() * 5000) + 1000,
+    })),
+  [totalItems]);
+
+  const indexMap = useMemo(() => 
+    Array.from({ length: totalItems }, (_, i) => i).sort(() => Math.random() - 0.5)
+  , [totalItems]);
+
+  const veRef = useRef<any>(null);
+  const versionRef = useRef(0);
+  const cursorRef = useRef(0);
+  const [isStreaming, setIsStreaming] = useState(false);
+  const [batchSize, setBatchSize] = useState(50);
+  const [updatesPerSec, setUpdatesPerSec] = useState(0);
+
+  const statsRef = useRef({ count: 0, lastTime: 0 });
+
+  React.useEffect(() => {
+    if (!isStreaming) {
+      setUpdatesPerSec(0);
+      return;
+    }
+
+    let rafId: number;
+    const loop = (now: number) => {
+      if (statsRef.current.lastTime === 0) statsRef.current.lastTime = now;
+
+      // Apply batch updates
+      for (let i = 0; i < batchSize; i++) {
+        const itemCursor = (cursorRef.current + i) % totalItems;
+        const poolCursor = (cursorRef.current + i) % POOL_SIZE;
+
+        const itemIdx = indexMap[itemCursor];
+        const item = items[itemIdx];
+        const delta = DELTA_POOL[poolCursor];
+
+        if (item) {
+          const oldPrice = item.price;
+          item.price += delta.price;
+          if (item.price < 5) item.price = 100 + Math.random() * 50;
+          
+          // Calculate realistic percentage change based on price movement
+          item.change = ((item.price - oldPrice) / oldPrice) * 100;
+
+          // Update volume (val)
+          item.val += Math.floor((Math.random() - 0.4) * 20);
+          if (item.val < 100) item.val = 1000 + Math.random() * 500;
+        }
+      }
+
+      cursorRef.current = (cursorRef.current + batchSize) % totalItems;
+      statsRef.current.count += batchSize;
+
+      // Notify Engine
+      if (veRef.current) {
+        veRef.current.update(items, ++versionRef.current);
+      }
+
+      // Update Statistics every second
+      const dt = now - statsRef.current.lastTime;
+      if (dt >= 1000) {
+        setUpdatesPerSec(Math.round((statsRef.current.count * 1000) / dt));
+        statsRef.current.count = 0;
+        statsRef.current.lastTime = now;
+      }
+
+      rafId = requestAnimationFrame(loop);
+    };
+
+    rafId = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(rafId);
+  }, [isStreaming, batchSize, items, totalItems, indexMap]);
+
   useSEO({
     title: "Benchmarks",
     description:
       "Live performance benchmarks comparing React Virtual Engine directly against React Window with 100,000 updating trading rows.",
   });
 
-  const [items] = useState(() =>
-    Array.from({ length: ITEM_COUNT }, (_, i) => ({
-      id: i,
-      name: `Stock ${i}`,
-      price: Math.random() * 1000 + 100,
-      change: (Math.random() - 0.5) * 5,
-    })),
-  );
-
   const renderItem = useMemo(
     () => (item: unknown, index: number) => (
-      <FastRow key={index} index={index} data={item as FastRowData} />
+      <FastRow 
+        key={index} 
+        index={index} 
+        data={item as FastRowData} 
+        isStreaming={isStreaming}
+      />
     ),
-    [],
+    [isStreaming],
   );
 
   return (
@@ -178,6 +262,60 @@ export const ComparisonPage: React.FC = () => {
           Comparing 100,000 items rendering. Watch the scroll smoothness and
           initialization speed.
         </p>
+
+        <div className="stream-controls">
+          <div className="control-group">
+            <div className="control-field no-label">
+              <label>&nbsp;</label>
+              <button
+                className={`stream-toggle ${isStreaming ? "active" : ""}`}
+                onClick={() => setIsStreaming(!isStreaming)}
+              >
+                <div className="status-pulse" />
+                {isStreaming ? "Stop Live Stream" : "Start Live Stream"}
+              </button>
+            </div>
+            <div className="batch-control">
+              <label>Intensity: <span className="intensity-value">{batchSize}</span> items/frame</label>
+              <input
+                type="range"
+                min="0"
+                max="2000"
+                step="50"
+                value={batchSize}
+                onChange={(e) => setBatchSize(parseInt(e.target.value))}
+                disabled={isStreaming}
+              />
+            </div>
+            <div className="total-control">
+              <label>Total Rows</label>
+              <select 
+                value={totalItems} 
+                onChange={(e) => setTotalItems(Number(e.target.value))}
+                className="total-select"
+                disabled={isStreaming}
+              >
+                <option value={1000}>1,000 Items</option>
+                <option value={5000}>5,000 Items</option>
+                <option value={10000}>10,000 Items</option>
+                <option value={50000}>50,000 Items</option>
+                <option value={100000}>100,000 Items</option>
+                <option value={200000}>200,000 Items</option>
+                <option value={400000}>400,000 Items (Safe Max)</option>
+              </select>
+            </div>
+          </div>
+          <div className="stats-badge">
+            <div className="control-field">
+              <label>Live Stats</label>
+              <div className="stats-content">
+                <span className="label">THROUGHPUT:</span>
+                <span className="value">{updatesPerSec.toLocaleString()}</span>
+                <span className="unit">updates/sec</span>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       <div className="comparison-grid">
@@ -196,6 +334,7 @@ export const ComparisonPage: React.FC = () => {
           </div>
           <div className="engine-list-container">
             <ReactVirtualEngine
+              ref={veRef}
               items={items}
               itemHeight={ROW_HEIGH}
               height={600}

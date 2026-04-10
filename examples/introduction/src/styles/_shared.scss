@@ -1,6 +1,6 @@
 .virtual-row-item {
-  padding: 0.5rem 2.5rem 0.5rem 1.5rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  padding: 0 0.5rem;
+  border-bottom: 1px solid rgba(var(--slate-800-rgb), 0.5);
   display: flex;
   align-items: center;
   justify-content: space-between;

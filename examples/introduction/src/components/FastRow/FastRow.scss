@@ -2,36 +2,61 @@
   color: var(--color-slate-500);
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 0.875rem;
-  width: 3rem;
+  width: 4.5rem; /* Space for large index */
+  text-align: left;
+  flex-shrink: 0;
 }
 
 .row-left {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: 1.5rem;
+  flex: 1;
+  min-width: 0; /* Prevents overflow */
 }
 
 .row-right {
   display: flex;
   align-items: center;
-  gap: 2rem;
-  min-width: 140px; /* Ensures enough space for price + percentage */
-  justify-content: flex-end; /* Align numbers neatly to the right */
+  gap: 1.5rem;
+  min-width: 320px; /* Increased to accommodate larger numbers safely */
+  justify-content: flex-end;
+}
+
+.row-val {
+  color: var(--color-slate-500);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.8rem;
+  min-width: 80px; /* Increased */
+  text-align: right;
+  padding: 2px 4px;
+  border-radius: 4px;
 }
 
 .row-name {
   color: var(--color-slate-200);
   font-weight: 500;
+  text-align: left;
 }
 
 .row-price {
   color: var(--color-brand-400);
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  padding: 2px 6px;
+  border-radius: 4px;
+  min-width: 100px; /* Increased for up to $99,999.99 */
+  text-align: right;
+  display: inline-block;
 }
 
 .row-change {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 0.875rem;
+  padding: 2px 6px;
+  border-radius: 4px;
+  min-width: 90px; /* Increased for up to +9999.99% */
+  text-align: right;
+  display: inline-block;
 
   &.positive {
     color: var(--color-emerald-400);
@@ -40,4 +65,17 @@
   &.negative {
     color: var(--color-rose-400);
   }
+}
+
+.flash-up {
+  color: var(--color-emerald-400) !important;
+}
+
+.flash-down {
+  color: var(--color-rose-400) !important;
+}
+
+.flash-val {
+  color: #fff !important;
+  background-color: rgba(6, 182, 212, 0.2);
 }
