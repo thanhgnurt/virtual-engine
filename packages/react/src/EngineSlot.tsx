@@ -6,7 +6,7 @@ export interface EngineSlotProps<T> {
   data: T | null;
   version?: number;
   renderItem: (
-    item: T,
+    item: T | null,
     index: number,
   ) => React.ReactElement<{ ref?: React.Ref<IVirtualRowHandle<T>> }>;
 }

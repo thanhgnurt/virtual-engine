@@ -40,7 +40,7 @@ export interface ReactVirtualEngineProps<T> {
   version?: number;
   onScroll?: (scrollTop: number) => void;
   renderItem: (
-    item: T,
+    item: T | null,
     index: number,
   ) => React.ReactElement<{ ref?: React.Ref<IVirtualRowHandle<T>> }>;
   role?: string;
@@ -169,8 +169,8 @@ const ReactVirtualEngine = forwardRef(
     }, []);
 
     const poolSize = useMemo(
-      () => Math.min(Math.ceil(viewH / rowH) + POOL_OVERHEAD, MAX_POOL),
-      [viewH, rowH],
+      () => engine.getPoolSize(POOL_OVERHEAD, MAX_POOL),
+      [engine],
     );
 
     const updateUI = useCallback(
@@ -247,6 +247,8 @@ const ReactVirtualEngine = forwardRef(
                 lastIdsRef.current[s] = item;
                 lastVersionsRef.current[s] = ver;
                 lastIndicesRef.current[s] = i;
+                lastTopsRef.current[s] = top;
+              } else if (isPosChanged) {
                 lastTopsRef.current[s] = top;
               }
             } else {
@@ -366,25 +368,7 @@ const ReactVirtualEngine = forwardRef(
         scrollToRow: ({ index, align = "auto", behavior = "auto" }) => {
           const el = containerRef.current;
           if (!el) return;
-          const itemTop = index * rowH + padY;
-          let top: number;
-          switch (align) {
-            case "start":
-              top = itemTop;
-              break;
-            case "end":
-              top = itemTop - viewH + rowH;
-              break;
-            case "center":
-              top = itemTop - viewH / 2 + rowH / 2;
-              break;
-            default: {
-              const isAbove = itemTop < el.scrollTop;
-              const isBelow = itemTop + rowH > el.scrollTop + viewH;
-              if (!isAbove && !isBelow) return;
-              top = isAbove ? itemTop : itemTop - viewH + rowH;
-            }
-          }
+          const top = engine.getScrollPos(index, align, el.scrollTop, padY);
           el.scrollTo({
             top: Math.max(0, top),
             behavior: behavior as ScrollBehavior,
@@ -418,10 +402,7 @@ const ReactVirtualEngine = forwardRef(
       [engine, rowH, viewH, padY, updateUI, sync],
     );
 
-    const prevScrollTop = useRef(0);
     const prevScrollTime = useRef(0);
-    const prevTS = useRef(0);
-    const prevV = useRef(0);
 
     const propsRef = useRef({
       onScrollEx,
@@ -451,33 +432,13 @@ const ReactVirtualEngine = forwardRef(
         if (onScrollEx) onScrollEx(currentTop);
 
         const now = performance.now();
-        const dt = now - prevTS.current;
-        let velocity = 0;
-
-        if (dt > 0 && dt < 100) {
-          const instantVelocity = engine.calculateVelocity(
-            currentTop,
-            prevScrollTop.current,
-            dt,
-          );
-          velocity = instantVelocity * 0.7 + prevV.current * 0.3;
-        } else {
-          velocity = prevV.current;
-        }
-
-        prevScrollTop.current = currentTop;
-        prevTS.current = now;
-        prevV.current = velocity;
-
-        const extraBuffer = engine.getDynamicBuffer(velocity);
+        const velocity = engine.updateVelocity(currentTop, now);
+        const next = engine.computeRange(currentTop, engine.getDynamicBuffer(velocity));
         const currentRange = rangeRef.current;
-        const next = engine.computeRange(currentTop, extraBuffer);
-        const nextStart = next.start;
-        const nextEnd = next.end;
 
-        if (currentRange.start !== nextStart || currentRange.end !== nextEnd) {
-          currentRange.start = nextStart;
-          currentRange.end = nextEnd;
+        if (next.changed) {
+          currentRange.start = next.start;
+          currentRange.end = next.end;
           if (updateUI(currentRange)) sync();
         }
 
@@ -485,12 +446,9 @@ const ReactVirtualEngine = forwardRef(
           rafId.current = requestAnimationFrame(onRafUpdate);
         } else {
           rafId.current = null;
-          prevV.current = 0;
+          engine.resetVelocity();
           const finalNext = engine.computeRange(currentTop);
-          if (
-            currentRange.start !== finalNext.start ||
-            currentRange.end !== finalNext.end
-          ) {
+          if (finalNext.changed) {
             currentRange.start = finalNext.start;
             currentRange.end = finalNext.end;
             if (updateUI(currentRange)) sync();
@@ -502,7 +460,6 @@ const ReactVirtualEngine = forwardRef(
         const now = performance.now();
         prevScrollTime.current = now;
         if (rafId.current === null) {
-          prevTS.current = now;
           rafId.current = requestAnimationFrame(onRafUpdate);
         }
       };
