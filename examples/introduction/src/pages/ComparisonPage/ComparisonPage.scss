@@ -86,8 +86,12 @@
       .stats-badge {
         display: flex;
         align-items: center;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.75rem;
         padding-left: 2rem;
         border-left: 1px solid rgba(255, 255, 255, 0.1);
+        min-width: 200px;
 
         @media (max-width: 767px) {
           border-left: none;
@@ -95,32 +99,77 @@
           border-top: 1px solid rgba(255, 255, 255, 0.1);
           padding-top: 1.5rem;
           width: 100%;
-          justify-content: center;
+          align-items: center;
         }
 
         .stats-content {
           display: flex;
-          align-items: baseline;
-          gap: 0.6rem;
+          flex-direction: column;
+          gap: 1.25rem;
+          width: 100%;
+
+          .stat-item {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            gap: 1rem;
+          }
         }
 
         .label {
-          font-size: 0.75rem;
+          font-size: 0.65rem;
           color: var(--color-slate-500);
           text-transform: uppercase;
+          font-weight: 600;
+          letter-spacing: 0.05em;
         }
         .value {
-          font-size: 1.5rem;
+          font-size: 1.4rem;
           font-weight: 700;
           color: #00ffff;
           font-family: ui-monospace, monospace;
-          min-width: 7.5rem; /* Fixed width to prevent resizing with large numbers */
           text-align: right;
-          display: inline-block;
+          flex-grow: 1;
         }
         .unit {
           font-size: 0.7rem;
           color: var(--color-slate-500);
+          min-width: 2.5rem;
+        }
+
+        .publish-btn {
+          width: 100%;
+          padding: 0.5rem 1rem;
+          background: linear-gradient(135deg, #00c6ff 0%, #0072ff 100%);
+          border: none;
+          border-radius: 0.5rem;
+          color: #fff;
+          font-size: 0.8rem;
+          font-weight: 700;
+          letter-spacing: 0.05em;
+          text-transform: uppercase;
+          cursor: pointer;
+          transition: all 0.3s ease;
+          box-shadow: 0 4px 15px rgba(0, 198, 255, 0.3);
+
+          &:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 198, 255, 0.4);
+          }
+
+          &:active:not(:disabled) {
+            transform: translateY(0);
+          }
+
+          &:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+          }
+
+          &.success {
+            background: linear-gradient(135deg, #00b09b 0%, #96c93d 100%);
+            box-shadow: 0 4px 12px rgba(0, 176, 155, 0.4);
+          }
         }
       }
 

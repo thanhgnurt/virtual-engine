@@ -116,12 +116,10 @@ const ReactVirtualEngine = forwardRef(
     const styleHidden = useMemo(
       () => ({
         position: ABSOLUTE,
-        transform: HIDDEN_TRANSFORM,
+        top: -9999,
         visibility: VISIBILITY_HIDDEN,
         width: W_100,
-        contain: STRICT,
         height: rowH,
-        willChange: TRANSFORM,
       }),
       [rowH],
     );
@@ -165,18 +163,6 @@ const ReactVirtualEngine = forwardRef(
       new Int32Array(MAX_POOL).fill(-2),
     );
 
-    const transformPoolRef = useRef<Record<number, string>>(
-      Object.create(null),
-    );
-    const getTransform = useCallback((top: number) => {
-      const pool = transformPoolRef.current;
-      let val = pool[top];
-      if (val === undefined) {
-        val = "translateY(" + top + "px)";
-        pool[top] = val;
-      }
-      return val;
-    }, []);
 
     const poolSize = useMemo(
       () => Math.min(Math.ceil(viewH / rowH) + POOL_OVERHEAD, MAX_POOL),
@@ -223,13 +209,13 @@ const ReactVirtualEngine = forwardRef(
             const wrapper = wrapperRefs.current[s];
             if (wrapper) {
               if (isOutOfRange) {
-                wrapper.style.transform = HIDDEN_TRANSFORM;
+                wrapper.style.top = "-9999px";
                 wrapper.style.visibility = VISIBILITY_HIDDEN;
               } else {
                 if (wrapper.className !== customClass) {
                   wrapper.className = customClass;
                 }
-                wrapper.style.transform = getTransform(top);
+                wrapper.style.top = top + "px";
                 wrapper.style.visibility = VISIBILITY_VISIBLE;
               }
             }

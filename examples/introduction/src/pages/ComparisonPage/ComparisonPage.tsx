@@ -3,6 +3,8 @@ import { ReactVirtualEngine } from "react-virtual-engine";
 import { CodeBlock } from "../../components/CodeBlock";
 import { ReactWindowList } from "../../components/ReactWindowList";
 import { useSEO } from "../../hooks";
+import { Leaderboard } from "../../components/Leaderboard/Leaderboard";
+import { saveBenchmarkResult, getBrowserInfo } from "../../services/benchmarkService";
 
 import { FastRow, FastRowData } from "../../components/FastRow";
 import { ROW_HEIGH } from "../../constants";
@@ -177,8 +179,14 @@ export const ComparisonPage: React.FC = () => {
   const [isStreaming, setIsStreaming] = useState(false);
   const [batchSize, setBatchSize] = useState(50);
   const [updatesPerSec, setUpdatesPerSec] = useState(0);
+  const [fps, setFps] = useState(0);
+  const [lastPeakThroughput, setLastPeakThroughput] = useState(0);
+  const [lastPeakFps, setLastPeakFps] = useState(0);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isPublished, setIsPublished] = useState(false);
+  const [refreshLeaderboard, setRefreshLeaderboard] = useState(0);
 
-  const statsRef = useRef({ count: 0, lastTime: 0 });
+  const statsRef = useRef({ count: 0, lastTime: 0, frames: 0 });
 
   React.useEffect(() => {
     if (!isStreaming) {
@@ -215,6 +223,7 @@ export const ComparisonPage: React.FC = () => {
 
       cursorRef.current = (cursorRef.current + batchSize) % totalItems;
       statsRef.current.count += batchSize;
+      statsRef.current.frames++;
 
       // Notify Engine
       if (veRef.current) {
@@ -224,8 +233,16 @@ export const ComparisonPage: React.FC = () => {
       // Update Statistics every second
       const dt = now - statsRef.current.lastTime;
       if (dt >= 1000) {
-        setUpdatesPerSec(Math.round((statsRef.current.count * 1000) / dt));
+        const ups = Math.round((statsRef.current.count * 1000) / dt);
+        const currentFps = Math.round((statsRef.current.frames * 1000) / dt);
+        
+        setUpdatesPerSec(ups);
+        setFps(currentFps);
+        setLastPeakThroughput(prev => Math.max(prev, ups));
+        setLastPeakFps(prev => Math.max(prev, currentFps));
+        
         statsRef.current.count = 0;
+        statsRef.current.frames = 0;
         statsRef.current.lastTime = now;
       }
 
@@ -235,6 +252,63 @@ export const ComparisonPage: React.FC = () => {
     rafId = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(rafId);
   }, [isStreaming, batchSize, items, totalItems, indexMap]);
+
+  const toggleStreaming = () => {
+    const nextState = !isStreaming;
+    if (nextState) {
+      // Start of a new run: Reset peaks and published status
+      setLastPeakThroughput(0);
+      setLastPeakFps(0);
+      setIsPublished(false);
+      
+      // Reset cursors and stats
+      cursorRef.current = 0;
+      statsRef.current = { count: 0, lastTime: 0, frames: 0 };
+    }
+    setIsStreaming(nextState);
+  };
+
+  const handlePublish = async () => {
+    if (lastPeakThroughput <= 0 || isSubmitting) return;
+
+    setIsSubmitting(true);
+    try {
+      const { browser, os } = getBrowserInfo();
+      
+      // Add a 10-second timeout to the Firestore operation
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error("Firebase request timed out.")), 10000);
+      });
+
+      await Promise.race([
+        saveBenchmarkResult({
+          userName: "Guest Developer",
+          updatesPerSec: lastPeakThroughput,
+          fps: lastPeakFps,
+          totalItems,
+          browser,
+          os,
+        }),
+        timeoutPromise,
+      ]);
+
+      setRefreshLeaderboard(v => v + 1);
+      setIsPublished(true);
+    } catch (err) {
+      console.error("❌ [ComparisonPage] Publish failed:", err);
+      const msg = err instanceof Error ? err.message : "Unknown error";
+      
+      if (msg.includes("timed out")) {
+        alert("⚠️ Publish timed out. This often happens if the Firestore Database hasn't been created/enabled in the Firebase Console yet.");
+      } else if (msg.includes("permission-denied")) {
+        alert("⛔ Firestore Permission Denied. Check your security rules.");
+      } else {
+        alert(`❌ Failed to publish: ${msg}. Check the Browser Console for more details.`);
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   useSEO({
     title: "Benchmarks",
@@ -269,7 +343,7 @@ export const ComparisonPage: React.FC = () => {
               <label>&nbsp;</label>
               <button
                 className={`stream-toggle ${isStreaming ? "active" : ""}`}
-                onClick={() => setIsStreaming(!isStreaming)}
+                onClick={toggleStreaming}
               >
                 <div className="status-pulse" />
                 {isStreaming ? "Stop Live Stream" : "Start Live Stream"}
@@ -309,11 +383,27 @@ export const ComparisonPage: React.FC = () => {
             <div className="control-field">
               <label>Live Stats</label>
               <div className="stats-content">
-                <span className="label">THROUGHPUT:</span>
-                <span className="value">{updatesPerSec.toLocaleString()}</span>
-                <span className="unit">updates/sec</span>
+                <div className="stat-item">
+                  <span className="label">THROUGHPUT:</span>
+                  <span className="value">{updatesPerSec.toLocaleString()}</span>
+                  <span className="unit">ups</span>
+                </div>
+                <div className="stat-item">
+                  <span className="label">REFRESH:</span>
+                  <span className="value">{fps}</span>
+                  <span className="unit">fps</span>
+                </div>
               </div>
             </div>
+            {!isStreaming && lastPeakThroughput > 0 && (
+              <button 
+                className={`publish-btn ${isSubmitting ? "loading" : ""} ${isPublished ? "success" : ""}`}
+                onClick={handlePublish}
+                disabled={isSubmitting || isPublished}
+              >
+                {isSubmitting ? "Publishing..." : isPublished ? "Sent ✅" : "Publish Result"}
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -386,6 +476,7 @@ export const ComparisonPage: React.FC = () => {
       </div>
 
       <BenchmarkNotes />
+      <Leaderboard refreshTrigger={refreshLeaderboard} />
     </div>
   );
 };
