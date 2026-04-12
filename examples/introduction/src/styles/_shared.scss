@@ -4,12 +4,6 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  transition: background-color 0.2s ease;
-  cursor: pointer;
-
-  &:hover {
-    background-color: rgba(var(--slate-800-rgb), 0.2);
-  }
 }
 
 .benchmark-card {
