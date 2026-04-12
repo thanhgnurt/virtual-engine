@@ -20,7 +20,6 @@ export interface IVirtualRowHandle<T = unknown> {
   update: (
     item: T,
     index: number,
-    cardIdx: number,
     rowElement: HTMLDivElement | null,
     version?: number,
     isLast?: boolean,
@@ -45,7 +44,6 @@ export interface ReactVirtualEngineProps<T> {
     index: number,
   ) => React.ReactElement<{ ref?: React.Ref<IVirtualRowHandle<T>> }>;
   role?: string;
-  cardIdx?: number;
   paddingVertical?: number;
 }
 
@@ -72,8 +70,6 @@ const VISIBILITY_VISIBLE = "visible";
 const TYPE_FUNCTION = "function";
 const ABSOLUTE = "absolute";
 const W_100 = "100%";
-const STRICT = "strict";
-const TRANSFORM = "transform";
 
 // ─────────────────────────────────────────────
 // ReactVirtualEngine
@@ -94,7 +90,6 @@ const ReactVirtualEngine = forwardRef(
       onScroll: onScrollEx,
       renderItem,
       role,
-      cardIdx,
       paddingVertical: padY = 0,
     }: ReactVirtualEngineProps<T>,
     ref: React.ForwardedRef<ReactVirtualEngineHandle>,
@@ -119,9 +114,7 @@ const ReactVirtualEngine = forwardRef(
         transform: HIDDEN_TRANSFORM,
         visibility: VISIBILITY_HIDDEN,
         width: W_100,
-        contain: STRICT,
         height: rowH,
-        willChange: TRANSFORM,
       }),
       [rowH],
     );
@@ -160,9 +153,6 @@ const ReactVirtualEngine = forwardRef(
     );
     const lastTopsRef = useRef<Float32Array>(
       new Float32Array(MAX_POOL).fill(-2),
-    );
-    const lastCardIdxsRef = useRef<Int32Array>(
-      new Int32Array(MAX_POOL).fill(-2),
     );
 
     const transformPoolRef = useRef<Record<number, string>>(
@@ -206,12 +196,14 @@ const ReactVirtualEngine = forwardRef(
           const top = isOutOfRange ? -9999 : i * rowH + padY;
           const item = isOutOfRange ? null : its[i];
 
-          const isChanged =
+          const isContentChanged =
             lastIdsRef.current[s] !== item ||
             lastVersionsRef.current[s] !== ver ||
-            lastIndicesRef.current[s] !== i ||
-            lastTopsRef.current[s] !== top ||
-            lastCardIdxsRef.current[s] !== (cardIdx ?? -1);
+            lastIndicesRef.current[s] !== i;
+
+          const isPosChanged = lastTopsRef.current[s] !== top;
+
+          const isChanged = isContentChanged || isPosChanged;
 
           if (isChanged) {
             const customClass = isOutOfRange
@@ -234,32 +226,31 @@ const ReactVirtualEngine = forwardRef(
               }
             }
 
-            const currentRef = refs[s] as {
-              update?: (...args: unknown[]) => void;
-              release?: () => void;
-            } | null;
+            const currentRef = refs[s] as IVirtualRowHandle<T> | null;
+
             if (currentRef) {
-              if (isOutOfRange) {
-                if (typeof currentRef.release === TYPE_FUNCTION) {
-                  currentRef.release();
+              if (isContentChanged) {
+                if (isOutOfRange) {
+                  if (typeof currentRef.release === TYPE_FUNCTION) {
+                    currentRef.release();
+                  }
+                } else if (typeof currentRef.update === TYPE_FUNCTION) {
+                  currentRef.update(
+                    item as T,
+                    i,
+                    wrapper,
+                    ver,
+                    i === its.length - 1,
+                    i === 0,
+                  );
                 }
-              } else if (typeof currentRef.update === TYPE_FUNCTION) {
-                currentRef.update(
-                  item,
-                  i,
-                  cardIdx ?? -1,
-                  wrapper,
-                  ver,
-                  i === its.length - 1,
-                  i === 0,
-                );
+                lastIdsRef.current[s] = item;
+                lastVersionsRef.current[s] = ver;
+                lastIndicesRef.current[s] = i;
+                lastTopsRef.current[s] = top;
               }
-              lastIdsRef.current[s] = item;
-              lastVersionsRef.current[s] = ver;
-              lastIndicesRef.current[s] = i;
-              lastTopsRef.current[s] = top;
-              lastCardIdxsRef.current[s] = cardIdx ?? -1;
             } else {
+              needsRerender = true;
               const initStyle = isOutOfRange
                 ? styleHidden
                 : {
@@ -268,9 +259,12 @@ const ReactVirtualEngine = forwardRef(
                     width: W_100,
                     height: rowH,
                     visibility: VISIBILITY_VISIBLE,
-                    contain: STRICT,
-                    willChange: TRANSFORM,
                   };
+
+              lastIdsRef.current[s] = item;
+              lastVersionsRef.current[s] = ver;
+              lastIndicesRef.current[s] = i;
+              lastTopsRef.current[s] = top;
 
               nodes[s] = (
                 <div
@@ -297,7 +291,6 @@ const ReactVirtualEngine = forwardRef(
                   />
                 </div>
               );
-              needsRerender = true;
             }
           }
         }
@@ -319,7 +312,6 @@ const ReactVirtualEngine = forwardRef(
         poolSize,
         rowH,
         padY,
-        cardIdx,
         renderItem,
         rowClass,
         getTransform,
@@ -433,7 +425,6 @@ const ReactVirtualEngine = forwardRef(
 
     const propsRef = useRef({
       onScrollEx,
-      cardIdx,
       padY,
       rowH,
       viewH,
@@ -442,7 +433,6 @@ const ReactVirtualEngine = forwardRef(
     });
     propsRef.current = {
       onScrollEx,
-      cardIdx,
       padY,
       rowH,
       viewH,

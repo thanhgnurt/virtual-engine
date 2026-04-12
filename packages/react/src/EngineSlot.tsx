@@ -3,7 +3,7 @@ import { IVirtualRowHandle } from "./ReactVirtualEngine";
 
 export interface EngineSlotProps<T> {
   index: number;
-  data: T;
+  data: T | null;
   version?: number;
   renderItem: (
     item: T,
