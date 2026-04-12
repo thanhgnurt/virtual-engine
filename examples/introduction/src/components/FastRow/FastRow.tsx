@@ -43,53 +43,27 @@ export const FastRow = memo(
 
             if (indexRef.current) setTextNode(indexRef.current, `#${index}`);
             if (nameRef.current) setTextNode(nameRef.current, data?.name ?? "");
-            
+
             if (priceRef.current) {
               const price = data?.price ?? 0;
               setTextNode(priceRef.current, `$${price.toFixed(2)}`);
-              
-              // Only flash if the item hasn't changed (ID is the same) AND streaming is active
-              if (priceChanged && data && !itemChanged && isStreaming) {
-                const cls = data.price > lastPriceRef.current ? "flash-up" : "flash-down";
-                lastPriceRef.current = data.price;
-                
-                priceRef.current.classList.remove("flash-up", "flash-down");
-                void priceRef.current.offsetWidth; // Force Reflow
-                priceRef.current.classList.add(cls);
-
-                if (changeRef.current) {
-                  changeRef.current.classList.remove("flash-up", "flash-down");
-                  void changeRef.current.offsetWidth;
-                  changeRef.current.classList.add(cls);
-                }
-              } else if (data) {
-                // Background update: price changed due to recycling or initial load
-                lastPriceRef.current = data.price;
-              }
+              lastPriceRef.current = price;
             }
 
             if (valRef.current) {
               const val = data?.val ?? 0;
               setTextNode(valRef.current, Math.floor(val).toLocaleString());
-              
-              if (valChanged && data && !itemChanged && isStreaming) {
-                lastValRef.current = data.val;
-                
-                valRef.current.classList.remove("flash-val");
-                void valRef.current.offsetWidth; // Force Reflow
-                valRef.current.classList.add("flash-val");
-              } else if (data) {
-                lastValRef.current = data.val;
-              }
+              lastValRef.current = val;
             }
 
             if (changeRef.current) {
               const change = data?.change ?? 0;
               const text = `${change >= 0 ? "+" : ""}${change.toFixed(2)}%`;
               setTextNode(changeRef.current, text);
-              changeRef.current.className = `row-change ${
-                change >= 0 ? "positive" : "negative"
-              }`;
+              
+              const isPositive = change >= 0;
+              changeRef.current.classList.toggle("positive", isPositive);
+              changeRef.current.classList.toggle("negative", !isPositive);
             }
           }
         },
