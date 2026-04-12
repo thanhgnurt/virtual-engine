@@ -119,7 +119,9 @@ const ReactVirtualEngine = forwardRef(
         transform: HIDDEN_TRANSFORM,
         visibility: VISIBILITY_HIDDEN,
         width: W_100,
+        contain: STRICT,
         height: rowH,
+        willChange: TRANSFORM,
       }),
       [rowH],
     );
@@ -266,6 +268,8 @@ const ReactVirtualEngine = forwardRef(
                     width: W_100,
                     height: rowH,
                     visibility: VISIBILITY_VISIBLE,
+                    contain: STRICT,
+                    willChange: TRANSFORM,
                   };
 
               nodes[s] = (
