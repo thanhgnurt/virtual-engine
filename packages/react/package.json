@@ -1,6 +1,6 @@
 {
   "name": "react-virtual-engine",
-  "version": "1.0.12",
+  "version": "1.0.13",
   "description": "React components and hooks for the high-performance virtual-engine.",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
@@ -11,7 +11,7 @@
   "author": "Thanh Trung Le <thanhgnurt@gmail.com>",
   "license": "MIT",
   "sideEffects": false,
-  "homepage": "https://react-virtual-engine.vercel.app/",
+  "homepage": "https://virtual-engine.vercel.app/",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/thanhgnurt/virtual-engine.git"
@@ -28,7 +28,7 @@
     "react-dom": ">=16.8.0"
   },
   "dependencies": {
-    "virtual-engine": "^1.0.12"
+    "virtual-engine": "^1.0.13"
   },
   "devDependencies": {
     "@types/react": "^18.0.0",
