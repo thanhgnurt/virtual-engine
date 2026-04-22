@@ -24,6 +24,7 @@
     "publish:all": "npm run build && npm publish -w virtual-engine --access public && npm publish -w react-virtual-engine --access public && npm publish -w virtual-chatbot --access public && npm publish -w react-virtual-chatbot --access public",
     "release": "npm run version:patch && npm run publish:all",
     "dev": "node -r ./scripts/crypto-polyfill.js ./node_modules/vite/bin/vite.js examples/introduction",
+    "dev:chatbot": "node -r ./scripts/crypto-polyfill.js ./node_modules/vite/bin/vite.js examples/chatbot",
     "lint": "eslint . --ext .ts,.tsx",
     "format": "prettier --write .",
     "prepare": "node -e \"if (process.env.NODE_ENV !== 'production') { try { require('husky').install() } catch (e) {} }\""

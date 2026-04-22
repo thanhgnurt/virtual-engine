@@ -20,7 +20,8 @@
     "react-dom": ">=16.8.0"
   },
   "dependencies": {
-    "virtual-chatbot": "^1.0.16"
+    "virtual-chatbot": "^1.0.16",
+    "virtual-engine": "*"
   },
   "devDependencies": {
     "@types/react": "^18.0.0",
