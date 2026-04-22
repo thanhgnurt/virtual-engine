@@ -1,22 +1,27 @@
 {
-  "name": "virtual-engine",
-  "version": "1.0.13",
+  "name": "virtual-engine-workspace",
+  "version": "1.0.18",
   "private": true,
   "description": "High-performance, zero-allocation rendering engine monorepo.",
   "workspaces": [
-    "packages/*",
+    "packages/core/*",
+    "packages/ui/*",
     "examples/*"
   ],
   "scripts": {
     "build": "npm run build --workspaces",
-    "build:core": "npm run build -w virtual-engine",
-    "build:react": "npm run build -w react-virtual-engine",
-    "dev:core": "npm run dev -w virtual-engine",
-    "dev:react": "npm run dev -w react-virtual-engine",
+    "build:engine": "npm run build -w virtual-engine",
+    "build:react-engine": "npm run build -w react-virtual-engine",
+    "build:chat": "npm run build -w virtual-chatbot",
+    "build:react-chat": "npm run build -w react-virtual-chatbot",
+    "dev:engine": "npm run dev -w virtual-engine",
+    "dev:react-engine": "npm run dev -w react-virtual-engine",
+    "dev:chat": "npm run dev -w virtual-chatbot",
+    "dev:react-chat": "npm run dev -w react-virtual-chatbot",
     "version:patch": "node scripts/bump-version.js patch",
     "version:minor": "node scripts/bump-version.js minor",
     "version:major": "node scripts/bump-version.js major",
-    "publish:all": "npm run build && npm publish -w virtual-engine --access public && npm publish -w react-virtual-engine --access public",
+    "publish:all": "npm run build && npm publish -w virtual-engine --access public && npm publish -w react-virtual-engine --access public && npm publish -w virtual-chatbot --access public && npm publish -w react-virtual-chatbot --access public",
     "release": "npm run version:patch && npm run publish:all",
     "dev": "node -r ./scripts/crypto-polyfill.js ./node_modules/vite/bin/vite.js examples/introduction",
     "lint": "eslint . --ext .ts,.tsx",
@@ -57,7 +62,5 @@
     "prettier": "^3.8.1",
     "typescript": "^5.0.0"
   },
-  "dependencies": {
-    "react-virtual-engine": "^1.0.7"
-  }
+  "dependencies": {}
 }

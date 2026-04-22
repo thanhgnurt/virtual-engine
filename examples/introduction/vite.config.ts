@@ -5,7 +5,7 @@ import { readFileSync } from "fs";
 
 const { version } = JSON.parse(
   readFileSync(
-    path.resolve(__dirname, "../../packages/react/package.json"),
+    path.resolve(__dirname, "../../packages/ui/react-virtual-engine/package.json"),
     "utf-8",
   ),
 );
@@ -39,11 +39,11 @@ export default defineConfig({
     alias: {
       "react-virtual-engine": path.resolve(
         __dirname,
-        "../../packages/react/src/index.ts",
+        "../../packages/ui/react-virtual-engine/src/index.ts",
       ),
       "virtual-engine": path.resolve(
         __dirname,
-        "../../packages/core/src/index.ts",
+        "../../packages/core/virtual-engine/src/index.ts",
       ),
     },
   },

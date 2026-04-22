@@ -22,8 +22,10 @@ const nextVersion = bumpVersion(rootPkg.version, type);
 
 const pkgPaths = [
   "./package.json",
-  "./packages/core/package.json",
-  "./packages/react/package.json",
+  "./packages/core/virtual-engine/package.json",
+  "./packages/ui/react-virtual-engine/package.json",
+  "./packages/core/virtual-chatbot/package.json",
+  "./packages/ui/react-virtual-chatbot/package.json",
 ];
 
 pkgPaths.forEach((p) => {

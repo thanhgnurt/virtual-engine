@@ -1,0 +1,31 @@
+{
+  "name": "react-virtual-chatbot",
+  "version": "1.0.18",
+  "description": "React components and hooks for the dynamic-height chat-engine.",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "author": "Thanh Trung Le <thanhgnurt@gmail.com>",
+  "license": "MIT",
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsup src/index.ts --format cjs,esm --dts --minify --clean --splitting --treeshake --external virtual-chatbot,react,react-dom",
+    "dev": "tsup src/index.ts --format cjs,esm --watch --dts"
+  },
+  "peerDependencies": {
+    "react": ">=16.8.0",
+    "react-dom": ">=16.8.0"
+  },
+  "dependencies": {
+    "virtual-chatbot": "^1.0.16"
+  },
+  "devDependencies": {
+    "@types/react": "^18.0.0",
+    "@types/react-dom": "^18.0.0",
+    "tsup": "^8.0.0",
+    "typescript": "^5.0.0"
+  }
+}

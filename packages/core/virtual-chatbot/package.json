@@ -1,7 +1,7 @@
 {
-  "name": "virtual-engine",
-  "version": "1.0.13",
-  "description": "High-performance, zero-allocation computational core for the virtual-engine.",
+  "name": "virtual-chatbot",
+  "version": "1.0.18",
+  "description": "High-performance dynamic-height virtual engine for chat interfaces.",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
@@ -11,14 +11,6 @@
   "author": "Thanh Trung Le <thanhgnurt@gmail.com>",
   "license": "MIT",
   "sideEffects": false,
-  "homepage": "https://react-virtual-engine.vercel.app/",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/thanhgnurt/virtual-engine.git"
-  },
-  "bugs": {
-    "url": "https://github.com/thanhgnurt/virtual-engine/issues"
-  },
   "scripts": {
     "build": "tsup src/index.ts --format cjs,esm --dts --minify --clean --splitting --treeshake",
     "dev": "tsup src/index.ts --format cjs,esm --watch --dts"
