@@ -669,8 +669,12 @@ function App() {
       timestamp: new Date(),
     };
 
-    // Append both synchronously and force scroll to evaluate the whole boundary
-    chatbotRef.current?.appendItems([newMessage, botMessage], true);
+    // Append both synchronously without default auto-scroll
+    chatbotRef.current?.appendItems([newMessage, botMessage], false);
+    
+    // Position user message at the top and leave space for AI response
+    chatbotRef.current?.setBottomBuffer(viewportHeight);
+    chatbotRef.current?.scrollToIndex(currentTotal);
     
     // The bot's exact index is the OLD length + 1 (since user is OLD length)
     const actualBotIndex = currentTotal + 1;

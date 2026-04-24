@@ -174,6 +174,7 @@ const ReactVirtualChatbotInner = <T,>(
   const prevScrollTime = useRef(performance.now());
   const isAtBottomRef = useRef(true);
   const bufferHeightRef = useRef(0);
+  const targetHeightRef = useRef(0);
 
   const itemsRef = useRef(items);
   itemsRef.current = items;
@@ -274,11 +275,13 @@ const ReactVirtualChatbotInner = <T,>(
         const container = containerRef.current;
         const content = contentRef.current;
 
-        // 1. Update Content Height
+        // 1. Update Content Height with Compensation
+        // We ensure the content height is at least targetHeightRef.current
+        // but also accounts for any manual elastic shrinkage.
         if (content) {
-          content.style.height = `${
-            engine.getTotalHeight() + bufferHeightRef.current
-          }px`;
+          const actualHeight = engine.getTotalHeight();
+          const compensatedHeight = Math.max(actualHeight, targetHeightRef.current);
+          content.style.height = `${compensatedHeight}px`;
         }
 
         // 2. Scroll Anchoring (Bypass jumping when content above expands)
@@ -401,6 +404,29 @@ const ReactVirtualChatbotInner = <T,>(
       const st = el.scrollTop;
       const sh = el.scrollHeight;
       const ch = el.clientHeight;
+
+      // 1. Elastic Buffer Logic:
+      // Instead of a fixed buffer, we make it shrink as the user scrolls up.
+      // This ensures that the whitespace disappears gracefully when reading history.
+      const actualContentHeight = engine.getTotalHeight();
+      const distanceToBottom = Math.max(0, actualContentHeight - ch - st);
+      
+      // We only apply this if we have an active focus buffer (e.g. from handleSend)
+      if (bufferHeightRef.current > 0) {
+        // Shrink the buffer linearly as we scroll up. 
+        // It becomes 0 when we are 'viewH' pixels away from the bottom.
+        const elasticBuffer = Math.max(0, viewH - distanceToBottom);
+        
+        if (elasticBuffer !== bufferHeightRef.current) {
+          bufferHeightRef.current = elasticBuffer;
+          // When shrinking elastically, we also need to shrink the targetHeight
+          targetHeightRef.current = actualContentHeight + elasticBuffer;
+          if (contentRef.current) {
+            contentRef.current.style.height = `${targetHeightRef.current}px`;
+          }
+        }
+      }
+
       isAtBottomRef.current = Math.abs(sh - st - ch) < 20;
 
       updateRange(st);
@@ -433,14 +459,19 @@ const ReactVirtualChatbotInner = <T,>(
     };
   }, [engine, updateRange, updateUI]);
 
-  useEffect(() => {
-    engine.updateOptions({ totalCount: itemsRef.current.length });
+  // Initial scroll to bottom and handling item updates
+  useLayoutEffect(() => {
     const el = containerRef.current;
-    if (isAtBottomRef.current && followOutput && el) {
-      el.scrollTop = el.scrollHeight;
+    if (!el) return;
+
+    engine.updateOptions({ totalCount: itemsRef.current.length });
+
+    if (followOutput && isAtBottomRef.current) {
+      // Use a very large value to ensure we hit the bottom even if layout is still settling
+      el.scrollTop = 10000000; 
       updateRange(el.scrollTop);
     } else {
-      updateRange(el?.scrollTop ?? 0);
+      updateRange(el.scrollTop);
     }
   }, [engine, updateRange, followOutput]);
 
@@ -519,8 +550,9 @@ const ReactVirtualChatbotInner = <T,>(
         if (isVisible) {
           // 1. Expand buffer to allow scrolling the last item to the top
           bufferHeightRef.current = 800;
+          targetHeightRef.current = engine.getTotalHeight() + 800;
           if (content)
-            content.style.height = `${engine.getTotalHeight() + 800}px`;
+            content.style.height = `${targetHeightRef.current}px`;
 
           // 2. Position typing indicator
           const top = engine.getTotalHeight();
@@ -532,6 +564,7 @@ const ReactVirtualChatbotInner = <T,>(
         } else {
           // 3. Remove buffer when typing finishes
           bufferHeightRef.current = 0;
+          targetHeightRef.current = 0;
           if (content) content.style.height = `${engine.getTotalHeight()}px`;
         }
       }
@@ -576,15 +609,18 @@ const ReactVirtualChatbotInner = <T,>(
     scrollToIndex: (index: number) => {
       const el = containerRef.current;
       if (el) {
+        // Scroll to the top of the item
         const targetST = engine.getOffset(index);
         el.scrollTop = targetST;
         updateRange(targetST);
       }
     },
     setBottomBuffer: (height: number) => {
+      const actualHeight = engine.getTotalHeight();
       bufferHeightRef.current = height;
+      targetHeightRef.current = actualHeight + height;
       if (contentRef.current) {
-        contentRef.current.style.height = `${engine.getTotalHeight() + height}px`;
+        contentRef.current.style.height = `${targetHeightRef.current}px`;
       }
     },
   }));
