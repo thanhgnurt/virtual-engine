@@ -246,11 +246,59 @@ const ReactVirtualChatbotInner = <T,>(
           if (slotHandle) {
             console.log(`[updateUI] Re-binding slot ${s} to index ${i} at top ${top}px`);
             slotHandle.update(item, i, wrapper, isVisible);
+            
+            // Initial measurement
+            if (isVisible) {
+              syncHeight(i, s);
+            }
           }
         }
       }
     },
     [engine, poolSize, rowH],
+  );
+
+  // Synchronize height of a slot and perform scroll anchoring / shifting
+  const syncHeight = useCallback(
+    (index: number, slotIndex: number) => {
+      const wrapper = wrapperRefs.current[slotIndex];
+      if (!wrapper || index < 0) return;
+
+      const h = wrapper.offsetHeight;
+      if (h <= 0) return;
+
+      const oldTop = engine.getOffset(index);
+      const changed = engine.setHeight(index, h);
+
+      if (changed) {
+        const container = containerRef.current;
+        const content = contentRef.current;
+
+        // 1. Update Content Height
+        if (content) {
+          content.style.height = `${
+            engine.getTotalHeight() + bufferHeightRef.current
+          }px`;
+        }
+
+        // 2. Scroll Anchoring (Bypass jumping when content above expands)
+        if (index < rangeRef.current.start && container) {
+          const newTop = engine.getOffset(index);
+          container.scrollTop += newTop - oldTop;
+        }
+
+        // 3. Re-position follow-on visible slots immediately
+        // This is faster than a full updateUI loop.
+        for (let s = 0; s < poolSize; s++) {
+          const si = lastIndicesRef.current[s];
+          if (si > index) {
+            const w = wrapperRefs.current[s];
+            if (w) w.style.transform = `translateY(${engine.getOffset(si)}px)`;
+          }
+        }
+      }
+    },
+    [engine, poolSize],
   );
 
   const nodePool = useMemo(() => {
@@ -297,8 +345,34 @@ const ReactVirtualChatbotInner = <T,>(
   useLayoutEffect(() => {
     const el = containerRef.current;
     const st = el ? el.scrollTop : 0;
+    lastVisRef.current.fill(0);
+
     updateUI(engine.computeRange(st));
   }, [engine, nodePool, updateUI]);
+
+  // Handle async height changes (images, etc.)
+  useLayoutEffect(() => {
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const target = entry.target as HTMLElement;
+        for (let s = 0; s < poolSize; s++) {
+          if (wrapperRefs.current[s] === target) {
+            const index = lastIndicesRef.current[s];
+            if (index !== -1) {
+              syncHeight(index, s);
+            }
+            break;
+          }
+        }
+      }
+    });
+
+    wrapperRefs.current.forEach((w) => {
+      if (w) observer.observe(w);
+    });
+
+    return () => observer.disconnect();
+  }, [poolSize, nodePool, syncHeight]);
 
   // Sync scroll and range
   const updateRange = useCallback(
@@ -468,6 +542,7 @@ const ReactVirtualChatbotInner = <T,>(
           const slot = refsRef.current[s];
           if (slot) {
             slot.updateText(text);
+            syncHeight(index, s);
           }
           break;
         }
@@ -489,6 +564,7 @@ const ReactVirtualChatbotInner = <T,>(
           if (slot) {
             const wrapper = wrapperRefs.current[s];
             slot.update(newItem, index, wrapper, true);
+            syncHeight(index, s);
           }
           break;
         }

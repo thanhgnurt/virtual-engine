@@ -52,12 +52,14 @@ export class VirtualChatbot {
     this._recomputeOffsets();
   }
 
-  private _recomputeOffsets() {
-    this._offsets = new Array(this._tc + 1);
-    this._offsets[0] = 0;
-    for (let i = 0; i < this._tc; i++) {
-      // Use actual height if measured, otherwise use the fixed estimate
-      // This provides the most stable scrollbar behavior.
+  private _recomputeOffsets(startIndex: number = 0) {
+    if (startIndex === 0 || !this._offsets || this._offsets.length !== this._tc + 1) {
+      this._offsets = new Array(this._tc + 1);
+      this._offsets[0] = 0;
+      startIndex = 0;
+    }
+    
+    for (let i = startIndex; i < this._tc; i++) {
       const h = this._measured[i] ? this._heights[i] : this._eh;
       this._offsets[i + 1] = this._offsets[i] + h;
     }
@@ -107,6 +109,7 @@ export class VirtualChatbot {
 
   setHeights(updates: Map<number, number>): boolean {
     let changed = false;
+    let minIndex = this._tc;
     // Use a small tolerance for subpixel changes to prevent infinite layout loops
     const TOLERANCE = 0.5;
 
@@ -129,10 +132,11 @@ export class VirtualChatbot {
       
       this._heights[index] = height;
       changed = true;
+      if (index < minIndex) minIndex = index;
     });
 
     if (changed) {
-      this._recomputeOffsets();
+      this._recomputeOffsets(minIndex);
     }
     return changed;
   }
