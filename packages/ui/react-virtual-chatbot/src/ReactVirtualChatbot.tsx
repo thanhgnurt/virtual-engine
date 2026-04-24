@@ -7,7 +7,6 @@ import React, {
   useLayoutEffect,
   useMemo,
   useRef,
-  useState,
 } from "react";
 import {
   SCROLL_STOP_DELAY,
@@ -73,9 +72,11 @@ export interface ReactVirtualChatbotProps<T> {
   ) => React.ReactElement<{ ref?: React.Ref<IVirtualChatRowHandle<T>> }>;
   /** Whether to automatically scroll to bottom on new items */
   followOutput?: boolean;
+  /** Optional custom component to render as the 'Thinking' indicator */
+  renderTypingIndicator?: () => React.ReactNode;
 }
 
-export interface ReactVirtualChatbotHandle {
+export interface ReactVirtualChatbotHandle<T = any> {
   readonly element: HTMLDivElement | null;
   scrollToBottom: () => void;
   /**
@@ -85,13 +86,30 @@ export interface ReactVirtualChatbotHandle {
   appendItems: (newItems: any[], forceScroll?: boolean) => void;
   /**
    * Show/hide a typing indicator ("AI is typing...")
+   * @param autoScroll If true, will jump to bottom. Default: true.
    */
-  setTyping: (isVisible: boolean) => void;
+  setTyping: (isVisible: boolean, autoScroll?: boolean) => void;
   /**
    * Specialized method to imperatively update a specific message's text node.
    * Extremely fast, bypasses React.
    */
   updateMessageText: (index: number, text: string) => void;
+  /**
+   * Update the underlying data for an item and refresh its slot if visible.
+   */
+  updateItem: (index: number, newItem: T) => void;
+  /**
+   * Scroll smoothly to a specific message index.
+   */
+  scrollToIndex: (index: number) => void;
+  /**
+   * Set a temporary bottom buffer to allow the last message to scroll to top.
+   */
+  setBottomBuffer: (height: number) => void;
+  /**
+   * Get the true total number of chat items managed internally.
+   */
+  getTotalCount: () => number;
 }
 
 // ─────────────────────────────────────────────
@@ -143,8 +161,9 @@ const ReactVirtualChatbotInner = <T,>(
     className,
     renderItem,
     followOutput = true,
+    renderTypingIndicator,
   }: ReactVirtualChatbotProps<T>,
-  ref: React.Ref<ReactVirtualChatbotHandle>,
+  ref: React.Ref<ReactVirtualChatbotHandle<T>>,
 ) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -152,6 +171,7 @@ const ReactVirtualChatbotInner = <T,>(
   const rafId = useRef<number | null>(null);
   const prevScrollTime = useRef(performance.now());
   const isAtBottomRef = useRef(true);
+  const bufferHeightRef = useRef(0);
 
   const itemsRef = useRef(items);
   itemsRef.current = items;
@@ -159,12 +179,12 @@ const ReactVirtualChatbotInner = <T,>(
   const engine = useMemo(
     () =>
       new VirtualEngine({
-        totalCount: itemsRef.current.length,
+        totalCount: items.length,
         itemHeight: rowH,
         viewportHeight: viewH,
         buffer: bufferRow,
       }),
-    [rowH, viewH, bufferRow],
+    [rowH, viewH, bufferRow, items.length],
   );
 
   const rangeRef = useRef<VirtualRange>({ start: 0, end: 0 });
@@ -222,6 +242,7 @@ const ReactVirtualChatbotInner = <T,>(
           // 2. Imperative Content Update
           const slotHandle = refsRef.current[s];
           if (slotHandle) {
+            console.log(`[updateUI] Re-binding slot ${s} to index ${i} at top ${top}px`);
             slotHandle.update(item, i, wrapper, isVisible);
           }
         }
@@ -354,11 +375,17 @@ const ReactVirtualChatbotInner = <T,>(
     scrollToBottom: () => {
       const el = containerRef.current;
       if (el) {
-        el.scrollTop = el.scrollHeight;
-        updateRange(el.scrollTop);
+        // Scroll to the end of actual content, ignoring the bottom buffer
+        const targetST = Math.max(0, engine.getTotalSize() - el.clientHeight);
+        el.scrollTop = targetST;
+        updateRange(targetST);
       }
     },
     appendItems: (newItems: T[], forceScroll?: boolean) => {
+      const oldLength = Array.isArray(itemsRef.current) ? itemsRef.current.length : 0;
+      console.log("[appendItems] Called with:", newItems.length, "items.");
+      console.log("[appendItems] Old length before append:", oldLength);
+      
       // 1. Update Internal Ref (Mutable Bypass)
       if (Array.isArray(itemsRef.current)) {
         (itemsRef.current as T[]).push(...newItems);
@@ -366,82 +393,149 @@ const ReactVirtualChatbotInner = <T,>(
         itemsRef.current = [...(itemsRef.current as any), ...newItems];
       }
 
+      const newLength = itemsRef.current.length;
+      console.log("[appendItems] New length after append:", newLength);
+
       // 2. Synchronize Engine
-      engine.updateOptions({ totalCount: itemsRef.current.length });
+      engine.updateOptions({ totalCount: newLength });
 
       // 3. React to changes
       const el = containerRef.current;
       const content = contentRef.current;
-      
+
       if (el && content) {
-        // 3. IMPORTANT: Update the spacer height imperatively 
+        // 3. IMPORTANT: Update the spacer height imperatively
         // because React won't re-render to update the style.height prop!
-        const totalSize = engine.getTotalSize() + 20;
+        const totalSize = engine.getTotalSize() + bufferHeightRef.current;
         content.style.height = `${totalSize}px`;
 
         // 4. Calculate target scroll position
         let targetST = el.scrollTop;
         if (forceScroll || (isAtBottomRef.current && followOutput)) {
-          targetST = totalSize - el.clientHeight; // Proper bottom target
+          // Normal auto-scroll only goes to the end of the ACTUAL messages
+          targetST = Math.max(0, engine.getTotalSize() - el.clientHeight);
           el.scrollTop = targetST;
+          console.log("[appendItems] Scroll Forced. targetST:", targetST, "Actual el.scrollTop:", el.scrollTop);
         }
 
         // 5. Force immediate UI update to catch the new items
         const velocity = engine.getVelocity();
-        const next = engine.computeRange(targetST, engine.getDynamicBuffer(velocity));
+        const next = engine.computeRange(
+          targetST,
+          engine.getDynamicBuffer(velocity),
+        );
         
+        console.log("[appendItems] Computed Range:", next.start, "to", next.end);
+
         rangeRef.current.start = next.start;
         rangeRef.current.end = next.end;
         updateUI(rangeRef.current);
+
       }
     },
-    setTyping: (isVisible: boolean) => {
+    setTyping: (isVisible: boolean, autoScroll = true) => {
       const el = typingRef.current;
       const container = containerRef.current;
+      const content = contentRef.current;
       if (el) {
         el.style.display = isVisible ? "flex" : "none";
-        
+
         if (isVisible) {
-          // Dynamic positioning at the very bottom
+          // 1. Expand buffer to allow scrolling the last item to the top
+          bufferHeightRef.current = 800;
+          if (content)
+            content.style.height = `${engine.getTotalSize() + 800}px`;
+
+          // 2. Position typing indicator
           const top = engine.getTotalSize();
           el.style.transform = `translateY(${top}px)`;
-          
-          if (container) {
+
+          if (autoScroll && container) {
             container.scrollTop = container.scrollHeight;
           }
+        } else {
+          // 3. Remove buffer when typing finishes
+          bufferHeightRef.current = 0;
+          if (content) content.style.height = `${engine.getTotalSize()}px`;
         }
       }
     },
     updateMessageText: (index: number, text: string) => {
-      const slotIdx = index % poolSize;
-      if (lastIndicesRef.current[slotIdx] === index) {
-        const slot = refsRef.current[slotIdx];
-        if (slot) slot.updateText(text);
+      for (let s = 0; s < poolSize; s++) {
+        if (lastIndicesRef.current[s] === index) {
+          const slot = refsRef.current[s];
+          if (slot) {
+            slot.updateText(text);
+          }
+          break;
+        }
+      }
+    },
+    updateItem: (index: number, newItem: T) => {
+      // 1. Update internal data
+      if (Array.isArray(itemsRef.current)) {
+        (itemsRef.current as T[])[index] = newItem;
+      } else {
+        // Handle read-only or ArrayLike if necessary, but usually it's an array we mutate
+        (itemsRef.current as any)[index] = newItem;
+      }
+
+      // 2. Update DOM if visible
+      for (let s = 0; s < poolSize; s++) {
+        if (lastIndicesRef.current[s] === index) {
+          const slot = refsRef.current[s];
+          if (slot) {
+            const wrapper = wrapperRefs.current[s];
+            slot.update(newItem, index, wrapper, true);
+          }
+          break;
+        }
+      }
+    },
+    getTotalCount: () => {
+      return Array.isArray(itemsRef.current) ? itemsRef.current.length : 0;
+    },
+    scrollToIndex: (index: number) => {
+      const el = containerRef.current;
+      if (el) {
+        const targetST = index * rowH;
+        el.scrollTop = targetST;
+        updateRange(targetST);
+      }
+    },
+    setBottomBuffer: (height: number) => {
+      bufferHeightRef.current = height;
+      if (contentRef.current) {
+        contentRef.current.style.height = `${engine.getTotalSize() + height}px`;
       }
     },
   }));
 
   return (
-    <div
-      ref={containerRef}
-      className={className}
-      style={{
-        height: viewH,
-        width,
-        overflowY: "scroll",
-        position: "relative",
-        scrollbarGutter: "stable",
-      }}
-    >
       <div
-        ref={contentRef}
+        ref={containerRef}
+        className={className}
         style={{
-          height: engine.getTotalSize() + 20,
-          width: "100%",
+          height: viewH,
+          width,
+          overflowY: "scroll",
           position: "relative",
+          scrollbarGutter: "stable",
+          display: "flex",
+          flexDirection: "column",
         }}
       >
-        {nodePool}
+        <div
+          ref={contentRef}
+          style={{
+            height: engine.getTotalSize(), // No buffer by default
+            width: "100%",
+            position: "relative",
+            marginTop: "auto",
+            flexShrink: 0,
+          }}
+        >
+          {nodePool}
 
         {/* Imperative Typing Indicator (Absolute within Content) */}
         <div
@@ -449,23 +543,49 @@ const ReactVirtualChatbotInner = <T,>(
           className="typing-indicator-container"
           style={{
             display: "none",
-            padding: "10px 20px",
             position: "absolute",
             top: 0,
             left: 0,
             zIndex: 10,
             pointerEvents: "none",
-            alignItems: "center",
           }}
         >
-          <div className="typing-indicator-dots">
-            <span className="dot"></span>
-            <span className="dot"></span>
-            <span className="dot"></span>
+          <div className="typing-indicator-content">
+            {renderTypingIndicator ? (
+              renderTypingIndicator()
+            ) : (
+              <div className="gemini-progress-icon">
+                <div className="spinner"></div>
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                  style={{ position: "relative", zIndex: 2 }}
+                >
+                  <path
+                    d="M12 0L14.59 7.41L22 10L14.59 12.59L12 20L9.41 12.59L2 10L9.41 7.41L12 0Z"
+                    fill="url(#typing-grad)"
+                  />
+                  <defs>
+                    <linearGradient
+                      id="typing-grad"
+                      x1="2"
+                      y1="0"
+                      x2="22"
+                      y2="20"
+                      gradientUnits="userSpaceOnUse"
+                    >
+                      <stop stopColor="#4B90FF" />
+                      <stop offset="0.5" stopColor="#FF5546" />
+                      <stop offset="1" stopColor="#9176FF" />
+                    </linearGradient>
+                  </defs>
+                </svg>
+              </div>
+            )}
           </div>
-          <span style={{ fontSize: "0.8rem", color: "#666", marginLeft: "8px" }}>
-            AI is typing...
-          </span>
         </div>
       </div>
     </div>
