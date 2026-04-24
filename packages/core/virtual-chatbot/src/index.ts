@@ -12,6 +12,9 @@ export interface VirtualChatbotOptions {
   buffer: number;
 }
 
+export const VELOCITY_THRESHOLD = 2; // px/ms
+export const DYNAMIC_BUFFER_FAST_SCROLL = 10; // rows
+
 export class VirtualChatbot {
   private _tc: number = 0;
   private _eh: number = 0;
@@ -24,6 +27,10 @@ export class VirtualChatbot {
   private _measured: boolean[] = [];
   private _measuredCount: number = 0;
   private _measuredTotalHeight: number = 0;
+
+  private _v: number = 0;  // smoothed velocity
+  private _lastST: number = 0; // last scrollTop
+  private _lastTS: number = 0; // last timestamp
 
   private _lastS: number = -1;
   private _lastE: number = -1;
@@ -136,12 +143,13 @@ export class VirtualChatbot {
     return this.setHeights(updates);
   }
 
-  computeRange(scrollTop: number): VirtualChatbotRange {
+  computeRange(scrollTop: number, extraBuffer?: number): VirtualChatbotRange {
+    const buffer = extraBuffer ?? this._b;
     const start = this._findStartIndex(scrollTop);
     const end = this._findEndIndex(scrollTop + this._vh);
 
-    const nextS = Math.max(0, start - this._b);
-    const nextE = Math.min(this._tc - 1, end + this._b);
+    const nextS = Math.max(0, start - buffer);
+    const nextE = Math.min(this._tc - 1, end + buffer);
 
     const changed = nextS !== this._lastS || nextE !== this._lastE;
     this._lastS = nextS;
@@ -190,6 +198,47 @@ export class VirtualChatbot {
 
   getOffset(index: number): number {
     return this._offsets[index] || 0;
+  }
+
+  getSlotMap(
+    range: VirtualChatbotRange,
+    poolSize: number,
+    out: Int32Array,
+  ): Int32Array {
+    out.fill(-1, 0, poolSize);
+    for (let i = range.start; i <= range.end; i++) {
+      if (i >= 0 && i < this._tc) {
+        out[i % poolSize] = i;
+      }
+    }
+    return out;
+  }
+
+  updateVelocity(scrollTop: number, now: number): number {
+    const dt = now - this._lastTS;
+    if (dt <= 0 || dt > 100) {
+      this._lastTS = now;
+      this._lastST = scrollTop;
+      return this._v;
+    }
+    const instantV = Math.abs(scrollTop - this._lastST) / dt;
+    this._lastTS = now;
+    this._lastST = scrollTop;
+    this._v = instantV * 0.7 + this._v * 0.3;
+    return this._v;
+  }
+
+  getVelocity(): number {
+    return this._v;
+  }
+
+  resetVelocity() {
+    this._v = 0;
+  }
+
+  getDynamicBuffer(velocity?: number): number {
+    const v = velocity ?? this._v;
+    return v > VELOCITY_THRESHOLD ? DYNAMIC_BUFFER_FAST_SCROLL : this._b;
   }
 
   getTotalHeight(): number {

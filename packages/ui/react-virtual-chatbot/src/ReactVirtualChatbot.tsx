@@ -11,9 +11,11 @@ import React, {
 import {
   SCROLL_STOP_DELAY,
   setTextNode,
-  VirtualEngine,
-  VirtualRange,
 } from "virtual-engine";
+import {
+  VirtualChatbot,
+  VirtualChatbotRange,
+} from "virtual-chatbot";
 
 export { setTextNode };
 
@@ -178,16 +180,16 @@ const ReactVirtualChatbotInner = <T,>(
 
   const engine = useMemo(
     () =>
-      new VirtualEngine({
+      new VirtualChatbot({
         totalCount: items.length,
-        itemHeight: rowH,
+        estimatedItemHeight: rowH,
         viewportHeight: viewH,
         buffer: bufferRow,
       }),
     [rowH, viewH, bufferRow, items.length],
   );
 
-  const rangeRef = useRef<VirtualRange>({ start: 0, end: 0 });
+  const rangeRef = useRef<VirtualChatbotRange>({ start: 0, end: 0 });
   const slotMapRef = useRef<Int32Array>(new Int32Array(MAX_POOL));
 
   // High-performance slot management
@@ -209,7 +211,7 @@ const ReactVirtualChatbotInner = <T,>(
   );
 
   const updateUI = useCallback(
-    (newRange?: VirtualRange) => {
+    (newRange?: VirtualChatbotRange) => {
       const range = newRange || rangeRef.current;
       const its = itemsRef.current;
       const pool = poolSize;
@@ -227,7 +229,7 @@ const ReactVirtualChatbotInner = <T,>(
 
         if (isContentChanged || isVisChanged) {
           const wrapper = wrapperRefs.current[s];
-          const top = isOutOfRange ? -9999 : i * rowH;
+          const top = isOutOfRange ? -9999 : engine.getOffset(i);
 
           // 1. Direct DOM positioning (Bypass React)
           if (wrapper) {
@@ -376,7 +378,7 @@ const ReactVirtualChatbotInner = <T,>(
       const el = containerRef.current;
       if (el) {
         // Scroll to the end of actual content, ignoring the bottom buffer
-        const targetST = Math.max(0, engine.getTotalSize() - el.clientHeight);
+        const targetST = Math.max(0, engine.getTotalHeight() - el.clientHeight);
         el.scrollTop = targetST;
         updateRange(targetST);
       }
@@ -406,14 +408,14 @@ const ReactVirtualChatbotInner = <T,>(
       if (el && content) {
         // 3. IMPORTANT: Update the spacer height imperatively
         // because React won't re-render to update the style.height prop!
-        const totalSize = engine.getTotalSize() + bufferHeightRef.current;
+        const totalSize = engine.getTotalHeight() + bufferHeightRef.current;
         content.style.height = `${totalSize}px`;
 
         // 4. Calculate target scroll position
         let targetST = el.scrollTop;
         if (forceScroll || (isAtBottomRef.current && followOutput)) {
           // Normal auto-scroll only goes to the end of the ACTUAL messages
-          targetST = Math.max(0, engine.getTotalSize() - el.clientHeight);
+          targetST = Math.max(0, engine.getTotalHeight() - el.clientHeight);
           el.scrollTop = targetST;
           console.log("[appendItems] Scroll Forced. targetST:", targetST, "Actual el.scrollTop:", el.scrollTop);
         }
@@ -444,10 +446,10 @@ const ReactVirtualChatbotInner = <T,>(
           // 1. Expand buffer to allow scrolling the last item to the top
           bufferHeightRef.current = 800;
           if (content)
-            content.style.height = `${engine.getTotalSize() + 800}px`;
+            content.style.height = `${engine.getTotalHeight() + 800}px`;
 
           // 2. Position typing indicator
-          const top = engine.getTotalSize();
+          const top = engine.getTotalHeight();
           el.style.transform = `translateY(${top}px)`;
 
           if (autoScroll && container) {
@@ -456,7 +458,7 @@ const ReactVirtualChatbotInner = <T,>(
         } else {
           // 3. Remove buffer when typing finishes
           bufferHeightRef.current = 0;
-          if (content) content.style.height = `${engine.getTotalSize()}px`;
+          if (content) content.style.height = `${engine.getTotalHeight()}px`;
         }
       }
     },
@@ -498,7 +500,7 @@ const ReactVirtualChatbotInner = <T,>(
     scrollToIndex: (index: number) => {
       const el = containerRef.current;
       if (el) {
-        const targetST = index * rowH;
+        const targetST = engine.getOffset(index);
         el.scrollTop = targetST;
         updateRange(targetST);
       }
@@ -506,7 +508,7 @@ const ReactVirtualChatbotInner = <T,>(
     setBottomBuffer: (height: number) => {
       bufferHeightRef.current = height;
       if (contentRef.current) {
-        contentRef.current.style.height = `${engine.getTotalSize() + height}px`;
+        contentRef.current.style.height = `${engine.getTotalHeight() + height}px`;
       }
     },
   }));
@@ -528,7 +530,7 @@ const ReactVirtualChatbotInner = <T,>(
         <div
           ref={contentRef}
           style={{
-            height: engine.getTotalSize(), // No buffer by default
+            height: engine.getTotalHeight(), // No buffer by default
             width: "100%",
             position: "relative",
             marginTop: "auto",
