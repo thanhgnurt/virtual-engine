@@ -64,6 +64,8 @@ export interface ReactVirtualChatbotProps<T> {
   ) => React.ReactElement<{ ref?: React.Ref<IVirtualChatRowHandle<T>> }>;
   /** Whether to automatically scroll to bottom on new items */
   followOutput?: boolean;
+  /** Optional index to scroll to on initial mount */
+  initialScrollIndex?: number;
   /** Optional custom component to render as the 'Thinking' indicator */
   renderTypingIndicator?: () => React.ReactNode;
 }

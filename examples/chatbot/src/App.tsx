@@ -83,66 +83,91 @@ ORDER BY total_spent DESC;`,
   },
 ];
 
-const INITIAL_MESSAGES: ChatMessage[] = [
-  {
-    id: "msg-0",
-    role: "user" as const,
-    content:
-      "Chào Gemini! Hãy cho tôi biết về các mẹo tối ưu hóa Performance Engineering cho tin nhắn ngắn.",
-  },
-  {
-    id: "msg-1",
-    role: "assistant" as const,
-    content: `Có vẻ như bạn đang thực hiện một bài kiểm tra phím ngẫu nhiên hoặc kiểm tra độ trễ (latency) của hệ thống.
-
-Dưới đây là một vài phân tích nhanh dưới góc độ **Performance Engineering** cho các loại tin nhắn ngắn và ngẫu nhiên như "fd", "jj":
-
-**1. Phân bổ bộ nhớ (Memory Allocation)**
-Với các chuỗi ký tự ngắn như thế này, nếu hệ thống không được tối ưu, việc tạo ra hàng ngàn đối tượng \`string\` nhỏ sẽ làm tăng tần suất hoạt động của **Garbage Collector (GC)**.
-
-*   **Mẹo tối ưu:** Sử dụng cơ chế \`string interning\` hoặc tái sử dụng các buffer nếu bạn đang xử lý dữ liệu ở mức độ thấp (low-level).
-
-**2. Xử lý UI/UX cho tin nhắn ngắn**
-Khi nội dung quá ngắn, việc ảo hóa cần phải cực kỳ nhạy bén để không gây ra hiện tượng nhảy vọt (layout shift) khi cuộn.`,
-  },
-  ...Array.from({ length: 100 }, (_, i) => {
-    const dice = i % 10;
-    let parts: ChatPart[] = [];
-    if (dice < 6) {
-      parts = [
-        {
-          type: "text",
-          content: `Tin nhắn mẫu thứ ${i}: Đây là nội dung mô phỏng để kiểm tra khả năng ảo hóa.`,
-        },
-      ];
-    } else if (dice === 7) {
-      const snippet = COMPLEX_CODE_SNIPPETS[i % COMPLEX_CODE_SNIPPETS.length];
-      parts = [
-        { type: "text", content: `Đoạn mã ${snippet.lang} mẫu số ${i}:` },
-        {
-          type: "code",
-          content: snippet.code,
-          metadata: { language: snippet.lang },
-        },
-      ];
-    } else if (dice === 8) {
-      parts = [
-        {
-          type: "image",
-          content: `https://picsum.photos/600/300?random=${i}`,
-          metadata: { aspectRatio: "2 / 1" },
-        },
-      ];
-    } else {
-      parts = [{ type: "text", content: `Nội dung ngẫu nhiên ${i}` }];
-    }
-    return {
-      id: `msg-old-${i}`,
-      role: (i % 2 === 0 ? "user" : "assistant") as any,
-      parts,
-    };
-  }),
+const LONG_TEXT_SAMPLES = [
+  "Lập trình là một hành trình thú vị nhưng cũng đầy thử thách. Để trở thành một kỹ sư phần mềm giỏi, bạn không chỉ cần học cú pháp của một ngôn ngữ mà còn phải hiểu sâu về kiến trúc hệ thống, cấu trúc dữ liệu và giải thuật. Ngoài ra, kỹ năng giải quyết vấn đề và tư duy phản biện là yếu tố then chốt giúp bạn vượt qua những bài toán phức tạp trong thực tế.",
+  "### Hướng dẫn tối ưu hóa Hiệu năng:\n1. Sử dụng Virtualization cho các danh sách lớn.\n2. Tránh re-render không cần thiết bằng cách sử dụng React.memo.\n3. Tối ưu hóa các tác vụ tính toán nặng bằng Web Workers.\n4. Giảm thiểu kích thước bundle bằng cách dynamic import.",
+  "Trong kỷ nguyên AI hiện nay, việc tích hợp các mô hình ngôn ngữ lớn (LLM) vào ứng dụng đang trở thành xu hướng tất yếu. Các nhà phát triển cần làm quen với việc xử lý dữ liệu dạng stream, thiết kế prompt hiệu quả và quản lý ngữ cảnh hội thoại để mang lại trải nghiệm tốt nhất cho người dùng cuối.",
+  "Có vẻ như bạn đang kiểm tra giới hạn hoặc vô tình bị ngắt quãng khi gõ phím. Với một kỹ sư chuyên về High-performance Frontend như Trung, những tin nhắn \"dở dang\" như thế này thực chất lại là những kịch bản thú vị để tối ưu hóa UI/UX:\n\n1. **Xử lý \"Input State\" thời gian thực**\nTrong các chatbot hiện đại như Gemini, ngay cả khi bạn chưa nhấn Enter, hệ thống có thể thực hiện:\n*   Predictive Text: Dự đoán từ tiếp theo để hỗ trợ người dùng gõ nhanh hơn.\n*   Draft Saving: Tự động lưu bản nháp vào localStorage để tránh mất nội dung khi refresh trang.\n\n2. **Tối ưu cho Virtual Engine với tin nhắn ngắn**\nKhi nội dung chỉ có vài ký tự như \"hell\", gánh nặng của react-virtual-engine không nằm ở việc hiển thị, mà ở việc quản lý các thuộc tính phụ (metadata):\n*   Row Overlay: Đảm bảo các thành phần như Avatar hay Time-stamp không bị lệch khi chiều cao của hàng (Row height) đạt mức tối thiểu.\n*   Text Shapers: Trình duyệt xử lý các chuỗi ngắn cực nhanh, nhưng nếu bạn có hàng chục ngàn tin nhắn như vậy, việc sử dụng `contain: strict` trong CSS sẽ giúp trình duyệt bỏ qua việc tính toán lại layout cho các hàng đã ẩn.\n\n3. **Trạng thái \"AI đang chờ đợi\"**\nNếu hệ thống nhận thấy người dùng ngừng gõ trong một khoảng thời gian (debounce), nó có thể hiển thị các gợi ý (Suggestion Chips) dựa trên từ khóa đang gõ dở:\n*   Gợi ý: [ \"Hello!\", \"Help with Mac\", \"How are you?\" ]\n\nMột lưu ý nhỏ về chiếc Mac của bạn:\nNếu bạn đang gõ \"hello\" mà bị mất chữ cuối, có thể là do dính phím (Sticky Keys) do bụi bẩn, hoặc Trackpad Interference khi vô tình chạm tay làm mất focus ô input.",
+  "Dưới đây là một đoạn mã mẫu về cách sử dụng `useEffect` trong React:\n\n```javascript\nuseEffect(() => {\n  console.log('Component mounted');\n  return () => console.log('Cleanup');\n}, []);\n```"
 ];
+
+const INITIAL_MESSAGES: ChatMessage[] = Array.from({ length: 100 }, (_, i) => {
+  const isUser = i % 2 === 0;
+  const dice = i % 5;
+  let content = LONG_TEXT_SAMPLES[dice];
+  
+  if (dice === 0) {
+    content += " " + "Phân tích độ phức tạp thời gian O(n log n) là rất quan trọng khi tối ưu hóa các giải thuật sắp xếp như Merge Sort hay Quick Sort trong các ứng dụng xử lý dữ liệu lớn.";
+  }
+
+  // Force the last item to be a beautifully structured long message for testing
+  if (i === 99) {
+    content = `### BÀI PHÂN TÍCH CHUYÊN SÂU VỀ HỆ THỐNG VIRTUAL ENGINE (PHẦN MỞ RỘNG)
+
+Hệ thống **Virtualization** mà chúng ta đang xây dựng không chỉ đơn thuần là ẩn/hiện các phần tử. Nó là một bài toán nghệ thuật về quản lý bộ nhớ và hiệu năng Render. Dưới đây là cái nhìn chi tiết hơn về các tầng kiến trúc:
+
+**1. Cơ chế Slot Recycling (Tái sử dụng khung hình)**
+Khi danh sách đạt tới hàng ngàn tin nhắn, việc giữ toàn bộ DOM node sẽ làm trình duyệt quá tải. Engine của chúng ta sử dụng cơ chế:
+*   **Static Containers:** Giữ các slot cố định trên màn hình để tránh tạo mới DOM liên tục.
+*   **Imperative Updates:** Đổ dữ liệu trực tiếp vào DOM thay vì re-render React toàn bộ component.
+*   **Zero-Allocation:** Hạn chế tạo object mới khi cuộn để giảm áp lực cho Garbage Collector (GC).
+
+**2. Thách thức về Chiều cao Động (Dynamic Height)**
+Đây là phần khó nhất trong Virtual List. Chúng ta xử lý bằng cách:
+*   Sử dụng **ResizeObserver** để lắng nghe sự thay đổi ngay khi dữ liệu được đổ vào.
+*   Cập nhật lại toàn bộ bản đồ **Offset** một cách tức thì sau mỗi lần đo.
+*   Đảm bảo thanh cuộn luôn phản ánh đúng thực tế dù nội dung có biến thiên đến đâu.
+
+**3. So sánh Hiệu năng (Benchmarks)**
+Dưới đây là bảng so sánh giữa giải pháp truyền thống và Virtual Engine:
+
+| Chỉ số | Truyền thống (1000 items) | Virtual Engine (1000 items) |
+| :--- | :---: | :---: |
+| DOM Nodes | 10,000+ | ~20 |
+| Memory Usage | 250MB | 15MB |
+| Frame Rate (60FPS) | Thường xuyên drop | Ổn định 60FPS |
+
+**4. Lộ trình Phát triển Tương lai (Roadmap)**
+Chúng ta sẽ không dừng lại ở đây. Các bước tiếp theo bao gồm:
+1.  **AI-Powered Scrolling:** Dự đoán hướng cuộn của người dùng để pre-fetch dữ liệu.
+2.  **Multi-Column Support:** Hỗ trợ ảo hóa cho các giao diện dạng Grid phức tạp hơn.
+3.  **Cross-Platform Adapter:** Đưa Engine này lên các nền tảng khác như Mobile (React Native).
+
+**5. Ví dụ về Cấu trúc Dữ liệu Nội bộ**
+Dưới đây là cách mà Engine lưu trữ các mốc vị trí (offsets):
+\`\`\`typescript
+interface LayoutMap {
+  index: number;
+  offsetTop: number;
+  height: number;
+}
+// Map này được cập nhật O(1) hoặc O(log n) tùy vào chiến thuật.
+\`\`\`
+
+Hy vọng bài phân tích siêu dài này không chỉ giúp bạn hiểu rõ về "nội công" phía sau mà còn giúp chúng ta kiểm tra được khả năng chịu tải cực hạn của hệ thống render!`.repeat(2);
+  }
+
+  const message: ChatMessage = {
+    id: `msg-old-${i}`,
+    role: isUser ? ("user" as const) : ("assistant" as const),
+    content: content,
+  };
+
+  // Occasionally add an image to assistant messages for variety (but not for the last long one)
+  if (!isUser && i % 15 === 0 && i !== 99) {
+    message.parts = [
+      { type: "text", content: content },
+      { 
+        type: "image", 
+        content: `https://picsum.photos/800/400?random=${i}`,
+        metadata: { aspectRatio: "2 / 1" }
+      }
+    ];
+    delete message.content;
+  }
+
+  return message;
+});
 
 const Sidebar = () => (
   <aside className="sidebar">
@@ -194,9 +219,6 @@ function App() {
   const inputRef = useRef<ChatInputHandle>(null);
   const activeAiIdxRef = useRef(-1);
 
-  useLayoutEffect(() => {
-    chatbotRef.current?.scrollToBottom();
-  }, []);
 
   const handleSend = useCallback((text: string) => {
     const chatbot = chatbotRef.current;
@@ -269,6 +291,10 @@ function App() {
     [],
   );
 
+  const lastUserIndex = INITIAL_MESSAGES.reduce((lastIdx, msg, idx) => {
+    return msg.role === "user" ? idx : lastIdx;
+  }, -1);
+
   return (
     <div className="gemini-app-container">
       <Sidebar />
@@ -278,7 +304,7 @@ function App() {
             <h1 className="logo-text">Gemini</h1>
           </div>
           <div className="header-center">
-            <div className="chat-title">Greeting and Offer of Help</div>
+            <div className="chat-title">Hệ thống Phân tích Virtual Engine</div>
           </div>
           <div className="header-right">
             <button className="upgrade-btn">
@@ -297,7 +323,8 @@ function App() {
             items={INITIAL_MESSAGES}
             renderItem={renderMessage}
             itemHeight={120}
-            followOutput={false}
+            followOutput={true}
+            initialScrollIndex={lastUserIndex}
           />
         </main>
 

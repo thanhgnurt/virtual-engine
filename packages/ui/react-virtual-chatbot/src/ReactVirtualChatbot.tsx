@@ -66,6 +66,7 @@ const ReactVirtualChatbotInner = <T,>(
     className,
     renderItem,
     followOutput = true,
+    initialScrollIndex,
     renderTypingIndicator,
   }: ReactVirtualChatbotProps<T>,
   ref: React.Ref<ReactVirtualChatbotHandle<T>>,
@@ -96,10 +97,6 @@ const ReactVirtualChatbotInner = <T,>(
     [rowH, bufferRow, items.length],
   );
 
-
-
-
-
   const rangeRef = useRef<VirtualChatbotRange>({ start: 0, end: 0 });
   const slotMapRef = useRef<Int32Array>(new Int32Array(MAX_POOL));
 
@@ -115,7 +112,9 @@ const ReactVirtualChatbotInner = <T,>(
   const lastIdsRef = useRef<(unknown | null)[]>(new Array(MAX_POOL).fill(null));
   const lastIndicesRef = useRef<Int32Array>(new Int32Array(MAX_POOL).fill(-2));
   const lastVisRef = useRef<Uint8Array>(new Uint8Array(MAX_POOL).fill(0));
-  const lastOffsetsRef = useRef<Float64Array>(new Float64Array(MAX_POOL).fill(-1));
+  const lastOffsetsRef = useRef<Float64Array>(
+    new Float64Array(MAX_POOL).fill(-1),
+  );
 
   const poolSize = useMemo(
     () => engine.getPoolSize(POOL_OVERHEAD, MAX_POOL),
@@ -296,7 +295,7 @@ const ReactVirtualChatbotInner = <T,>(
             }}
             initialIndex={-1}
             initialData={null}
-            renderItem={renderItem}
+            renderItem={renderItem as any}
           />
         </div>,
       );
@@ -422,8 +421,9 @@ const ReactVirtualChatbotInner = <T,>(
 
     if (initialScrollDoneRef.current) {
       if (followOutput && isAtBottomRef.current) {
-        el.scrollTop = 10000000;
-        updateRange(el.scrollTop);
+        const targetST = Math.max(0, engine.getTotalHeight() - el.clientHeight);
+        el.scrollTop = targetST;
+        updateRange(targetST);
       } else {
         updateRange(el.scrollTop);
       }
@@ -432,28 +432,40 @@ const ReactVirtualChatbotInner = <T,>(
 
     const isRestored = el.scrollTop > 0;
 
-    if (followOutput && !isRestored) {
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          if (!containerRef.current) return;
-          containerRef.current.scrollTop = 10000000;
-          updateRange(containerRef.current.scrollTop);
+    if ((initialScrollIndex !== undefined || followOutput) && !isRestored) {
+      // Content-Aware Scroll: Wait for engine to stabilize total height
+      const performInitialScroll = () => {
+        if (!containerRef.current) return;
+        const totalH = engine.getTotalHeight();
+        if (totalH <= 0) return;
+
+        const ch = containerRef.current.clientHeight;
+        
+        let targetST = 0;
+        if (initialScrollIndex !== undefined && initialScrollIndex >= 0 && initialScrollIndex < itemsRef.current.length) {
+          targetST = engine.getOffset(initialScrollIndex);
+        } else if (followOutput) {
+          targetST = Math.max(0, totalH - ch);
           isAtBottomRef.current = true;
-        });
+        }
+
+        containerRef.current.scrollTop = targetST;
+        updateRange(targetST);
+        initialScrollDoneRef.current = true;
+      };
+
+      // Use a double-frame wait to ensure initial render and measurement complete
+      requestAnimationFrame(() => {
+        requestAnimationFrame(performInitialScroll);
       });
 
-      setTimeout(() => {
-        if (!containerRef.current) return;
-        containerRef.current.scrollTop = 10000000;
-        updateRange(containerRef.current.scrollTop);
-        isAtBottomRef.current = true;
-        initialScrollDoneRef.current = true;
-      }, 200);
+      // Safe fallback for complex layouts
+      setTimeout(performInitialScroll, 300);
     } else {
       updateRange(el.scrollTop);
       initialScrollDoneRef.current = true;
     }
-  }, [engine, updateRange, followOutput]);
+  }, [engine, updateRange, followOutput, initialScrollIndex]);
 
   useImperativeHandle(ref, () => ({
     get element() {
@@ -479,7 +491,9 @@ const ReactVirtualChatbotInner = <T,>(
     },
     appendItems: (newItems: T[], forceScroll?: boolean) => {
       // Create a NEW array to avoid mutating the original prop (Immutability)
-      const prevItems = Array.isArray(itemsRef.current) ? itemsRef.current : Array.from(itemsRef.current);
+      const prevItems = Array.isArray(itemsRef.current)
+        ? itemsRef.current
+        : Array.from(itemsRef.current);
       const nextItems = [...prevItems, ...newItems] as T[];
       itemsRef.current = nextItems;
 
@@ -542,7 +556,11 @@ const ReactVirtualChatbotInner = <T,>(
         const item = its[index];
         if (typeof item.content === "string") {
           item.content = text;
-        } else if (item.parts && item.parts[0] && item.parts[0].type === "text") {
+        } else if (
+          item.parts &&
+          item.parts[0] &&
+          item.parts[0].type === "text"
+        ) {
           item.parts[0].content = text;
         } else if (!item.parts) {
           // Fallback if content was empty
