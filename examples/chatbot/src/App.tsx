@@ -3,6 +3,7 @@ import {
   ChatInput,
   type ChatInputHandle,
   ChatMessage,
+  GeminiSparkle,
   ReactVirtualChatbot,
   ReactVirtualChatbotHandle,
   UniversalChatRow,
@@ -13,7 +14,7 @@ const INITIAL_MESSAGES: ChatMessage[] = [
   {
     id: "welcome",
     role: "assistant",
-    content: "Chào bạn! Tôi đã sẵn sàng hỗ trợ. Bạn có thể gửi tin nhắn văn bản hoặc đính kèm ảnh để tôi phân tích nhé!",
+    content: "Chào bạn! Tôi đã kết nối với OpenRouter. Bạn có thể chọn bất kỳ model nào (GPT-4, Claude, Gemini...) để trò chuyện nhé!",
   }
 ];
 
@@ -42,7 +43,7 @@ const Sidebar = () => (
 );
 
 function App() {
-  const [apiKey, setApiKey] = useState("AIzaSyCX8Rt2cmtl1TSuAeLBHgxJweqqO2z9fC0");
+  const [apiKey, setApiKey] = useState("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");
   const [availableModels, setAvailableModels] = useState<ModelInfo[]>([]);
   const [selectedModel, setSelectedModel] = useState<ModelInfo | null>(null);
   const [pendingFile, setPendingFile] = useState<PendingFile | null>(null);
@@ -51,30 +52,32 @@ function App() {
   const inputRef = useRef<ChatInputHandle>(null);
   const activeAiIdxRef = useRef(-1);
 
+  // Fetch OpenRouter Models
   useEffect(() => {
     if (!apiKey) return;
-    fetch(`https://generativelanguage.googleapis.com/v1/models?key=${apiKey}`)
+    fetch("https://openrouter.ai/api/v1/models", {
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+        "HTTP-Referer": window.location.origin,
+        "X-Title": "Virtual Chatbot"
+      }
+    })
       .then(r => r.json())
       .then(data => {
-        if (data.models) {
-          const models: ModelInfo[] = data.models
-            .filter((m: any) => m.supportedGenerationMethods?.includes("generateContent"))
-            .map((m: any) => {
-              const id = m.name.replace("models/", "");
-              return {
-                id,
-                name: id.split("-").map((s: string) => s.charAt(0).toUpperCase() + s.slice(1)).join(" "),
-                desc: m.description || "Model từ tài khoản của bạn",
-                icon: id.includes("pro") ? "🧠" : id.includes("flash") ? "⚡" : "✨"
-              };
-            });
+        if (data.data) {
+          const models: ModelInfo[] = data.data.map((m: any) => ({
+            id: m.id,
+            name: m.name || m.id,
+            desc: m.description || "OpenRouter Model",
+            icon: m.id.includes("gpt") ? "🤖" : m.id.includes("claude") ? "🧠" : m.id.includes("gemini") ? "✨" : "🌟"
+          }));
           setAvailableModels(models);
           if (models.length > 0) {
-            setSelectedModel(prev => models.find(m => m.id === prev?.id) || models[0]);
+            setSelectedModel(prev => models.find(m => m.id === prev?.id) || models.find(m => m.id.includes("google/gemini-2.0-flash-lite:free")) || models[0]);
           }
         }
       })
-      .catch(e => console.error("Lỗi quét model:", e));
+      .catch(e => console.error("Lỗi lấy model OpenRouter:", e));
   }, [apiKey]);
 
   const handleFileSelect = (file: File) => {
@@ -99,28 +102,36 @@ function App() {
     if (!chatbot || !apiKey || !selectedModel) return;
 
     if (activeAiIdxRef.current !== -1) {
-      chatbot.patchMetadata(activeAiIdxRef.current, { minHeight: null });
+      chatbot.patchMetadata(activeAiIdxRef.current, { minHeight: null, isLoading: false });
     }
 
-    let imagePart = null;
-    let userMessageContent = text;
+    let userMessageContent: any = text;
+    let visualContent = text;
+    let base64Image = "";
+
     if (pendingFile) {
       try {
-        const base64 = await fileToBase64(pendingFile.file);
-        imagePart = {
-          inline_data: {
-            mime_type: pendingFile.file.type,
-            data: base64
+        base64Image = await fileToBase64(pendingFile.file);
+        visualContent = `![image](${pendingFile.preview})\n\n${text}`;
+        userMessageContent = [
+          { type: "text", text },
+          { 
+            type: "image_url", 
+            image_url: { url: `data:${pendingFile.file.type};base64,${base64Image}` } 
           }
-        };
-        userMessageContent = `![image](${pendingFile.preview})\n\n${text}`;
+        ];
       } catch (e) {
         console.error("Lỗi xử lý ảnh:", e);
       }
     }
 
-    const userMsg: ChatMessage = { id: `u-${Date.now()}`, role: "user", content: userMessageContent };
-    const aiMsg: ChatMessage = { id: `a-${Date.now()}`, role: "assistant", content: "...", metadata: { minHeight: "80vh" } };
+    const userMsg: ChatMessage = { id: `u-${Date.now()}`, role: "user", content: visualContent };
+    const aiMsg: ChatMessage = { 
+      id: `a-${Date.now()}`, 
+      role: "assistant", 
+      content: "...", 
+      metadata: { minHeight: "80vh", isLoading: true } 
+    };
 
     chatbot.appendItems([userMsg, aiMsg], false);
     const aiIdx = chatbot.getTotalCount() - 1;
@@ -134,21 +145,24 @@ function App() {
     try {
       inputRef.current?.setStreaming(true);
       
-      const contents = [{
-        parts: [
-          { text },
-          ...(imagePart ? [imagePart] : [])
-        ]
-      }];
+      const messages = [
+        { role: "user", content: userMessageContent }
+      ];
 
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1/models/${selectedModel.id}:streamGenerateContent?alt=sse&key=${apiKey}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ contents })
-        }
-      );
+      const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+          "HTTP-Referer": window.location.origin,
+          "X-Title": "Virtual Chatbot"
+        },
+        body: JSON.stringify({
+          model: selectedModel.id,
+          messages: messages,
+          stream: true
+        })
+      });
 
       if (!response.ok) {
         const err = await response.json().catch(() => ({}));
@@ -168,12 +182,20 @@ function App() {
         const chunk = decoder.decode(value, { stream: true });
         const lines = chunk.split("\n");
         for (const line of lines) {
+          if (line.trim() === "") continue;
+          if (line.trim() === "data: [DONE]") break;
+          
           if (line.startsWith("data: ")) {
             try {
               const json = JSON.parse(line.substring(6));
-              fullText += json.candidates?.[0]?.content?.parts?.[0]?.text || "";
-              chatbot.updateMessageText(aiIdx, fullText);
-            } catch (e) {}
+              const content = json.choices?.[0]?.delta?.content || "";
+              fullText += content;
+              if (fullText) {
+                chatbot.updateMessageText(aiIdx, fullText);
+              }
+            } catch (e) {
+              // Một số chunk có thể không phải JSON hoàn chỉnh
+            }
           }
         }
       }
@@ -181,15 +203,25 @@ function App() {
       chatbot.updateMessageText(aiIdx, `❌ Lỗi: ${error.message}`);
     } finally {
       inputRef.current?.setStreaming(false);
-      chatbot.patchMetadata(aiIdx, { minHeight: null });
+      chatbot.patchMetadata(aiIdx, { minHeight: null, isLoading: false });
       activeAiIdxRef.current = -1;
       if (currentPendingFile) URL.revokeObjectURL(currentPendingFile.preview);
     }
   }, [apiKey, selectedModel, pendingFile]);
 
-  const renderMessage = useCallback((item: ChatMessage | null, index: number) => (
-    <UniversalChatRow key={item?.id || index} item={item} />
-  ), []);
+  const renderMessage = useCallback((item: ChatMessage | null, index: number) => {
+    if (item?.role === "assistant") {
+      return (
+        <div key={item.id} className="assistant-message-wrapper">
+          <div className="ai-message-prefix">
+            <GeminiSparkle isLoading={item.metadata?.isLoading} />
+          </div>
+          <UniversalChatRow item={item} />
+        </div>
+      );
+    }
+    return <UniversalChatRow key={item?.id || index} item={item} />;
+  }, []);
 
   return (
     <div className="gemini-app-container">
@@ -201,7 +233,7 @@ function App() {
             <div className="api-key-input-wrapper">
               <input 
                 type="password" 
-                placeholder="Dán API Key vào đây..." 
+                placeholder="Dán OpenRouter API Key vào đây..." 
                 value={apiKey}
                 onChange={(e) => setApiKey(e.target.value)}
                 className="api-key-input"
