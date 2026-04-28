@@ -11,10 +11,12 @@ import React, {
 import { VirtualChatbot, VirtualChatbotRange } from "virtual-chatbot";
 import { SCROLL_STOP_DELAY, setTextNode } from "virtual-engine";
 import {
+  ChatMessage,
   IVirtualChatRowHandle,
   ReactVirtualChatbotHandle,
   ReactVirtualChatbotProps,
 } from "./types";
+import { RAFEngine, TickContext, TickFn } from "./utils/useRequestAnimation";
 
 export { setTextNode };
 
@@ -22,10 +24,6 @@ export { setTextNode };
 // Sub-components (Internal to the Engine)
 // ─────────────────────────────────────────────
 
-/**
- * Passive slot that renders once and delegates all data updates to the children via ref.
- * This ensures 0 overhead during recycling as React never re-renders the slot.
- */
 const EngineSlot = memo(
   forwardRef(
     <T,>(
@@ -71,6 +69,7 @@ const ReactVirtualChatbotInner = <T,>(
   }: ReactVirtualChatbotProps<T>,
   ref: React.Ref<ReactVirtualChatbotHandle<T>>,
 ) => {
+  // 1. Basic Refs & Engine Initialization
   const containerRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const typingRef = useRef<HTMLDivElement>(null);
@@ -96,19 +95,23 @@ const ReactVirtualChatbotInner = <T,>(
       }),
     [rowH, bufferRow, items.length],
   );
+  const engineRef = useRef(engine);
+  engineRef.current = engine;
 
+  const poolSize = useMemo(
+    () => engine.getPoolSize(POOL_OVERHEAD, MAX_POOL),
+    [engine],
+  );
+
+  // 2. Virtualization Data Refs
   const rangeRef = useRef<VirtualChatbotRange>({ start: 0, end: 0 });
   const slotMapRef = useRef<Int32Array>(new Int32Array(MAX_POOL));
-
-  // High-performance slot management
   const refsRef = useRef<(IVirtualChatRowHandle<T> | null)[]>(
     new Array(MAX_POOL).fill(null),
   );
   const wrapperRefs = useRef<(HTMLDivElement | null)[]>(
     new Array(MAX_POOL).fill(null),
   );
-
-  // Tracking arrays to minimize redundant DOM/ref updates
   const lastIdsRef = useRef<(unknown | null)[]>(new Array(MAX_POOL).fill(null));
   const lastIndicesRef = useRef<Int32Array>(new Int32Array(MAX_POOL).fill(-2));
   const lastVisRef = useRef<Uint8Array>(new Uint8Array(MAX_POOL).fill(0));
@@ -116,12 +119,7 @@ const ReactVirtualChatbotInner = <T,>(
     new Float64Array(MAX_POOL).fill(-1),
   );
 
-  const poolSize = useMemo(
-    () => engine.getPoolSize(POOL_OVERHEAD, MAX_POOL),
-    [engine],
-  );
-
-  // --- STABLE ANCHORING ENGINE ---
+  // 3. Core Utility Functions (Positioning & Sync)
   const anchorRef = useRef({ index: -1, offset: 0 });
 
   const recordAnchor = useCallback(() => {
@@ -154,7 +152,6 @@ const ReactVirtualChatbotInner = <T,>(
     }
   }, [engine]);
 
-  // Synchronize height of a slot and perform scroll anchoring / shifting
   const syncHeight = useCallback(
     (index: number, slotIndex: number) => {
       const wrapper = wrapperRefs.current[slotIndex];
@@ -165,7 +162,7 @@ const ReactVirtualChatbotInner = <T,>(
       if (h <= 0) return;
 
       const oldH = engine.getHeight(index);
-      if (Math.abs(h - oldH) < 0.5) return; // Ignore micro changes
+      if (Math.abs(h - oldH) < 0.5) return;
 
       const changed = engine.setHeight(index, h);
 
@@ -173,13 +170,10 @@ const ReactVirtualChatbotInner = <T,>(
         if (container.style.scrollBehavior !== "auto") {
           container.style.scrollBehavior = "auto";
         }
-
         const content = contentRef.current;
         if (content) {
           content.style.height = `${engine.getTotalHeight()}px`;
         }
-
-        // Reposition only subsequent visible slots
         for (let s = 0; s < poolSize; s++) {
           const si = lastIndicesRef.current[s];
           if (si > index) {
@@ -198,8 +192,7 @@ const ReactVirtualChatbotInner = <T,>(
 
   const updateUI = useCallback(
     (newRange?: VirtualChatbotRange) => {
-      recordAnchor(); // Capture position before changes
-
+      recordAnchor();
       const range = newRange || rangeRef.current;
       const its = itemsRef.current;
       const pool = poolSize;
@@ -209,21 +202,17 @@ const ReactVirtualChatbotInner = <T,>(
         const i = slotMap[s];
         const isOutOfRange = i === -1;
         const item = isOutOfRange ? null : its[i];
-
         const isVisible = !isOutOfRange;
-        const isContentChanged =
-          lastIdsRef.current[s] !== item || lastIndicesRef.current[s] !== i;
+        const isContentChanged = lastIdsRef.current[s] !== item || lastIndicesRef.current[s] !== i;
         const isVisChanged = lastVisRef.current[s] !== (isVisible ? 1 : 0);
 
         if (isContentChanged || isVisChanged) {
           const wrapper = wrapperRefs.current[s];
           const top = isOutOfRange ? -9999 : engine.getOffset(i);
-
           if (wrapper) {
             wrapper.style.transform = `translateY(${top}px)`;
             wrapper.style.visibility = isVisible ? "visible" : "hidden";
           }
-
           lastIdsRef.current[s] = item;
           lastIndicesRef.current[s] = i;
           lastVisRef.current[s] = isVisible ? 1 : 0;
@@ -232,25 +221,72 @@ const ReactVirtualChatbotInner = <T,>(
           const slotHandle = refsRef.current[s];
           if (slotHandle && (isContentChanged || isVisChanged)) {
             slotHandle.update(item, i, wrapper, isVisible);
-            if (isVisible) {
-              syncHeight(i, s);
-            }
+            if (isVisible) syncHeight(i, s);
           }
         }
       }
-
-      applyAnchor(); // Restore position after all updates
+      applyAnchor();
     },
-    [engine, poolSize, rowH, syncHeight, recordAnchor, applyAnchor],
+    [engine, poolSize, syncHeight, recordAnchor, applyAnchor],
   );
 
-  // Trigger UI update when items change
+  // 4. High-Performance Streaming Engine
+  const updateBufferRef = useRef<Map<number, string>>(new Map());
+  const rafTickRef = useRef<TickFn | null>(null);
+  const animationActionRef = useRef<(ctx: TickContext) => void>(() => {});
+
+  const processStreamingUpdates = useCallback(() => {
+    const buffer = updateBufferRef.current;
+    if (buffer.size === 0) return;
+
+    buffer.forEach((content, idx) => {
+      for (let s = 0; s < poolSize; s++) {
+        if (lastIndicesRef.current[s] === idx) {
+          const slot = refsRef.current[s];
+          if (slot) {
+            slot.updateText(content);
+            syncHeight(idx, s);
+            const el = containerRef.current;
+            if (followOutput && isAtBottomRef.current && el) {
+              const targetST = Math.max(0, engineRef.current.getTotalHeight() - el.clientHeight);
+              el.scrollTop = targetST;
+            }
+          }
+          break;
+        }
+      }
+    });
+    buffer.clear();
+  }, [poolSize, syncHeight, followOutput]);
+
+  animationActionRef.current = processStreamingUpdates;
+
+  const updateMessageTextThrottled = useCallback((index: number, text: string) => {
+    // Cast to any first to handle generic T, then use internal structure
+    const its = itemsRef.current as any;
+    if (its && its[index]) {
+      const item = its[index] as ChatMessage;
+      if (typeof item.content === "string") item.content = text;
+      else if (item.parts?.[0]?.type === "text") item.parts[0].content = text;
+      else if (!item.parts) item.content = text;
+    }
+    updateBufferRef.current.set(index, text);
+    if (!rafTickRef.current) {
+      const raf = RAFEngine.getInstance();
+      rafTickRef.current = raf.addTick({
+        intervalTime: 0,
+        lastFlush: performance.now(),
+        actionRef: animationActionRef,
+      });
+    }
+  }, []);
+
+  // 5. Lifecycle Effects
   useEffect(() => {
     engine.updateOptions({ totalCount: items.length });
     updateUI();
   }, [items.length, updateUI, engine]);
 
-  // Auto-measure viewport height (Imperative)
   useLayoutEffect(() => {
     if (!containerRef.current) return;
     const obs = new ResizeObserver((entries) => {
@@ -258,48 +294,35 @@ const ReactVirtualChatbotInner = <T,>(
       if (h > 0 && h !== viewHRef.current) {
         viewHRef.current = h;
         engine.updateOptions({ viewportHeight: h });
-        
         const el = containerRef.current;
         if (followOutput && isAtBottomRef.current && el) {
           const targetST = Math.max(0, engine.getTotalHeight() - h);
           el.scrollTop = targetST;
         }
-        
         updateUI();
       }
     });
     obs.observe(containerRef.current);
     return () => obs.disconnect();
-  }, [engine, updateUI]);
+  }, [engine, updateUI, followOutput]);
 
   const nodePool = useMemo(() => {
     const pool = poolSize;
-    const items = [];
-
-    lastIdsRef.current.fill(null);
-    lastIndicesRef.current.fill(-2);
-    lastVisRef.current.fill(0);
-
+    const nodes = [];
     for (let s = 0; s < pool; s++) {
-      items.push(
+      nodes.push(
         <div
           key={s}
-          ref={(r) => {
-            wrapperRefs.current[s] = r;
-          }}
+          ref={(r) => { wrapperRefs.current[s] = r; }}
           style={{
             position: "absolute",
-            top: 0,
-            left: 0,
-            width: "100%",
+            top: 0, left: 0, width: "100%",
             transform: `translateY(-9999px)`,
             visibility: "hidden",
           }}
         >
           <EngineSlot
-            ref={(r) => {
-              refsRef.current[s] = r;
-            }}
+            ref={(r) => { refsRef.current[s] = r; }}
             initialIndex={-1}
             initialData={null}
             renderItem={renderItem as any}
@@ -307,14 +330,13 @@ const ReactVirtualChatbotInner = <T,>(
         </div>,
       );
     }
-    return items;
+    return nodes;
   }, [poolSize, renderItem]);
 
   useLayoutEffect(() => {
     const el = containerRef.current;
     const st = el ? el.scrollTop : 0;
     lastVisRef.current.fill(0);
-
     updateUI(engine.computeRange(st));
   }, [engine, nodePool, updateUI]);
 
@@ -325,30 +347,20 @@ const ReactVirtualChatbotInner = <T,>(
         for (let s = 0; s < poolSize; s++) {
           if (wrapperRefs.current[s] === target) {
             const index = lastIndicesRef.current[s];
-            if (index !== -1) {
-              syncHeight(index, s);
-            }
+            if (index !== -1) syncHeight(index, s);
             break;
           }
         }
       }
     });
-
-    wrapperRefs.current.forEach((w) => {
-      if (w) observer.observe(w);
-    });
-
+    wrapperRefs.current.forEach((w) => { if (w) observer.observe(w); });
     return () => observer.disconnect();
   }, [poolSize, nodePool, syncHeight]);
 
   const updateRange = useCallback(
     (scrollTop: number) => {
       const velocity = engine.updateVelocity(scrollTop, performance.now());
-      const next = engine.computeRange(
-        scrollTop,
-        engine.getDynamicBuffer(velocity),
-      );
-
+      const next = engine.computeRange(scrollTop, engine.getDynamicBuffer(velocity));
       if (next.changed) {
         rangeRef.current.start = next.start;
         rangeRef.current.end = next.end;
@@ -361,32 +373,24 @@ const ReactVirtualChatbotInner = <T,>(
   useLayoutEffect(() => {
     const el = containerRef.current;
     if (!el) return;
-
     const onRafUpdate = () => {
       if (isAnchoringRef.current) return;
       const st = el.scrollTop;
       const sh = el.scrollHeight;
       const ch = el.clientHeight;
-
-      const actualContentHeight = engine.getTotalHeight();
-      const distanceToBottom = Math.max(0, actualContentHeight - ch - st);
+      const actualHeight = engine.getTotalHeight();
+      const distanceToBottom = Math.max(0, actualHeight - ch - st);
 
       if (bufferHeightRef.current > 0) {
         const elasticBuffer = Math.max(0, viewHRef.current - distanceToBottom);
-
         if (elasticBuffer !== bufferHeightRef.current) {
           bufferHeightRef.current = elasticBuffer;
-          targetHeightRef.current = actualContentHeight + elasticBuffer;
-          if (contentRef.current) {
-            contentRef.current.style.height = `${targetHeightRef.current}px`;
-          }
+          targetHeightRef.current = actualHeight + elasticBuffer;
+          if (contentRef.current) contentRef.current.style.height = `${targetHeightRef.current}px`;
         }
       }
-
       isAtBottomRef.current = Math.abs(sh - st - ch) < 20;
-
       updateRange(st);
-
       if (performance.now() - prevScrollTime.current < SCROLL_STOP_DELAY) {
         rafId.current = requestAnimationFrame(onRafUpdate);
       } else {
@@ -400,19 +404,10 @@ const ReactVirtualChatbotInner = <T,>(
         }
       }
     };
-
-    const sh = el.scrollHeight;
-    const st = el.scrollTop;
-    const ch = el.clientHeight;
-    isAtBottomRef.current = sh - st - ch < 20 || sh <= ch;
-
     const handleScroll = () => {
       prevScrollTime.current = performance.now();
-      if (rafId.current === null) {
-        rafId.current = requestAnimationFrame(onRafUpdate);
-      }
+      if (rafId.current === null) rafId.current = requestAnimationFrame(onRafUpdate);
     };
-
     el.addEventListener("scroll", handleScroll, { passive: true });
     return () => {
       el.removeEventListener("scroll", handleScroll);
@@ -423,9 +418,6 @@ const ReactVirtualChatbotInner = <T,>(
   useLayoutEffect(() => {
     const el = containerRef.current;
     if (!el) return;
-
-    engine.updateOptions({ totalCount: itemsRef.current.length });
-
     if (initialScrollDoneRef.current) {
       if (followOutput && isAtBottomRef.current) {
         const targetST = Math.max(0, engine.getTotalHeight() - el.clientHeight);
@@ -436,37 +428,25 @@ const ReactVirtualChatbotInner = <T,>(
       }
       return;
     }
-
     const isRestored = el.scrollTop > 0;
-
     if ((initialScrollIndex !== undefined || followOutput) && !isRestored) {
-      // Content-Aware Scroll: Wait for engine to stabilize total height
       const performInitialScroll = () => {
         if (!containerRef.current) return;
         const totalH = engine.getTotalHeight();
         if (totalH <= 0) return;
-
         const ch = containerRef.current.clientHeight;
-        
         let targetST = 0;
-        if (initialScrollIndex !== undefined && initialScrollIndex >= 0 && initialScrollIndex < itemsRef.current.length) {
+        if (initialScrollIndex !== undefined && initialScrollIndex >= 0 && initialScrollIndex < (itemsRef.current as any).length) {
           targetST = engine.getOffset(initialScrollIndex);
         } else if (followOutput) {
           targetST = Math.max(0, totalH - ch);
           isAtBottomRef.current = true;
         }
-
         containerRef.current.scrollTop = targetST;
         updateRange(targetST);
         initialScrollDoneRef.current = true;
       };
-
-      // Use a double-frame wait to ensure initial render and measurement complete
-      requestAnimationFrame(() => {
-        requestAnimationFrame(performInitialScroll);
-      });
-
-      // Safe fallback for complex layouts
+      requestAnimationFrame(() => { requestAnimationFrame(performInitialScroll); });
       setTimeout(performInitialScroll, 300);
     } else {
       updateRange(el.scrollTop);
@@ -474,10 +454,9 @@ const ReactVirtualChatbotInner = <T,>(
     }
   }, [engine, updateRange, followOutput, initialScrollIndex]);
 
+  // 6. Imperative Handle
   useImperativeHandle(ref, () => ({
-    get element() {
-      return containerRef.current;
-    },
+    get element() { return containerRef.current; },
     scrollToBottom: () => {
       const el = containerRef.current;
       if (el) {
@@ -487,46 +466,32 @@ const ReactVirtualChatbotInner = <T,>(
       }
     },
     patchMetadata: (index: number, patch: any) => {
-      const its = itemsRef.current as any[];
+      const its = itemsRef.current as any;
       if (its && its[index]) {
         const item = its[index];
         const updatedMetadata = { ...(item.metadata || {}), ...patch };
         const updatedItem = { ...item, metadata: updatedMetadata };
-        // Reuse existing updateItem logic
         (ref as any).current.updateItem(index, updatedItem);
       }
     },
     appendItems: (newItems: T[], forceScroll?: boolean) => {
-      // Create a NEW array to avoid mutating the original prop (Immutability)
-      const prevItems = Array.isArray(itemsRef.current)
-        ? itemsRef.current
-        : Array.from(itemsRef.current);
+      const prevItems = Array.isArray(itemsRef.current) ? itemsRef.current : Array.from(itemsRef.current);
       const nextItems = [...prevItems, ...newItems] as T[];
       itemsRef.current = nextItems;
-
-      const newLength = itemsRef.current.length;
-      engine.updateOptions({ totalCount: newLength });
-
+      engine.updateOptions({ totalCount: nextItems.length });
       const el = containerRef.current;
       const content = contentRef.current;
-
       if (el && content) {
         const totalSize = engine.getTotalHeight() + bufferHeightRef.current;
         content.style.height = `${totalSize}px`;
-
         let targetST = el.scrollTop;
         if (forceScroll || (isAtBottomRef.current && followOutput)) {
           targetST = Math.max(0, engine.getTotalHeight() - el.clientHeight);
           el.scrollTop = targetST;
           if (forceScroll) isAtBottomRef.current = true;
         }
-
         const velocity = engine.getVelocity();
-        const next = engine.computeRange(
-          targetST,
-          engine.getDynamicBuffer(velocity),
-        );
-
+        const next = engine.computeRange(targetST, engine.getDynamicBuffer(velocity));
         rangeRef.current.start = next.start;
         rangeRef.current.end = next.end;
         updateUI(rangeRef.current);
@@ -538,18 +503,13 @@ const ReactVirtualChatbotInner = <T,>(
       const content = contentRef.current;
       if (el) {
         el.style.display = isVisible ? "flex" : "none";
-
         if (isVisible) {
           bufferHeightRef.current = 800;
           targetHeightRef.current = engine.getTotalHeight() + 800;
           if (content) content.style.height = `${targetHeightRef.current}px`;
-
           const top = engine.getTotalHeight();
           el.style.transform = `translateY(${top}px)`;
-
-          if (autoScroll && container) {
-            container.scrollTop = container.scrollHeight;
-          }
+          if (autoScroll && container) container.scrollTop = container.scrollHeight;
         } else {
           bufferHeightRef.current = 0;
           targetHeightRef.current = 0;
@@ -558,49 +518,12 @@ const ReactVirtualChatbotInner = <T,>(
       }
     },
     updateMessageText: (index: number, text: string) => {
-      // 1. Update source data first to ensure recycling preserves the content
-      const its = itemsRef.current as any[];
-      if (its && its[index]) {
-        const item = its[index];
-        if (typeof item.content === "string") {
-          item.content = text;
-        } else if (
-          item.parts &&
-          item.parts[0] &&
-          item.parts[0].type === "text"
-        ) {
-          item.parts[0].content = text;
-        } else if (!item.parts) {
-          // Fallback if content was empty
-          item.content = text;
-        }
-      }
-
-      // 2. Update the visible slot immediately
-      for (let s = 0; s < poolSize; s++) {
-        if (lastIndicesRef.current[s] === index) {
-          const slot = refsRef.current[s];
-          if (slot) {
-            slot.updateText(text);
-            syncHeight(index, s);
-
-            // Auto-scroll if we are following output and were already at bottom
-            const el = containerRef.current;
-            if (followOutput && isAtBottomRef.current && el) {
-              const targetST = Math.max(0, engine.getTotalHeight() - el.clientHeight);
-              el.scrollTop = targetST;
-            }
-          }
-          break;
-        }
-      }
+      updateMessageTextThrottled(index, text);
     },
     updateItem: (index: number, newItem: T) => {
-      if (Array.isArray(itemsRef.current)) {
-        (itemsRef.current as T[])[index] = newItem;
-      } else {
-        (itemsRef.current as any)[index] = newItem;
-      }
+      const its = itemsRef.current as any;
+      if (Array.isArray(its)) its[index] = newItem;
+      else its[index] = newItem;
 
       for (let s = 0; s < poolSize; s++) {
         if (lastIndicesRef.current[s] === index) {
@@ -614,12 +537,10 @@ const ReactVirtualChatbotInner = <T,>(
         }
       }
     },
-    getTotalCount: () => {
-      return Array.isArray(itemsRef.current) ? itemsRef.current.length : 0;
-    },
+    getTotalCount: () => { return (itemsRef.current as any).length || 0; },
     scrollToIndex: (index: number) => {
       const el = containerRef.current;
-      if (el && index >= 0 && index < itemsRef.current.length) {
+      if (el && index >= 0 && index < (itemsRef.current as any).length) {
         const offset = engine.getOffset(index);
         el.scrollTop = offset;
         updateRange(offset);
@@ -636,9 +557,7 @@ const ReactVirtualChatbotInner = <T,>(
       const actualHeight = engine.getTotalHeight();
       bufferHeightRef.current = height;
       targetHeightRef.current = actualHeight + height;
-      if (contentRef.current) {
-        contentRef.current.style.height = `${targetHeightRef.current}px`;
-      }
+      if (contentRef.current) contentRef.current.style.height = `${targetHeightRef.current}px`;
     },
   }));
 
@@ -647,65 +566,33 @@ const ReactVirtualChatbotInner = <T,>(
       ref={containerRef}
       className={className}
       style={{
-        height: "100%",
-        width,
-        overflowY: "scroll",
-        position: "relative",
-        scrollbarGutter: "stable",
+        height: "100%", width, overflowY: "scroll", position: "relative", scrollbarGutter: "stable",
       }}
     >
       <div
         ref={contentRef}
         style={{
           height: engine.getTotalHeight() + bufferHeightRef.current,
-          width: "100%",
-          position: "relative",
+          width: "100%", position: "relative",
         }}
       >
         {nodePool}
-
         <div
           ref={typingRef}
           className="typing-indicator-container"
           style={{
-            display: "none",
-            position: "absolute",
-            top: 0,
-            left: 0,
-            zIndex: 10,
-            pointerEvents: "none",
+            display: "none", position: "absolute", top: 0, left: 0, zIndex: 10, pointerEvents: "none",
           }}
         >
           <div className="typing-indicator-content">
-            {renderTypingIndicator ? (
-              renderTypingIndicator()
-            ) : (
+            {renderTypingIndicator ? renderTypingIndicator() : (
               <div className="gemini-progress-icon">
                 <div className="spinner"></div>
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                  style={{ position: "relative", zIndex: 2 }}
-                >
-                  <path
-                    d="M12 0L14.59 7.41L22 10L14.59 12.59L12 20L9.41 12.59L2 10L9.41 7.41L12 0Z"
-                    fill="url(#typing-grad)"
-                  />
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ position: "relative", zIndex: 2 }}>
+                  <path d="M12 0L14.59 7.41L22 10L14.59 12.59L12 20L9.41 12.59L2 10L9.41 7.41L12 0Z" fill="url(#typing-grad)" />
                   <defs>
-                    <linearGradient
-                      id="typing-grad"
-                      x1="2"
-                      y1="0"
-                      x2="22"
-                      y2="20"
-                      gradientUnits="userSpaceOnUse"
-                    >
-                      <stop stopColor="#4B90FF" />
-                      <stop offset="0.5" stopColor="#FF5546" />
-                      <stop offset="1" stopColor="#9176FF" />
+                    <linearGradient id="typing-grad" x1="2" y1="0" x2="22" y2="20" gradientUnits="userSpaceOnUse">
+                      <stop stopColor="#4B90FF" /><stop offset="0.5" stopColor="#FF5546" /><stop offset="1" stopColor="#9176FF" />
                     </linearGradient>
                   </defs>
                 </svg>
