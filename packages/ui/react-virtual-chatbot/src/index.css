@@ -237,6 +237,9 @@ body {
   line-height: 1.625;
   color: #1f1f1f;
   word-wrap: break-word;
+  max-width: 100%;
+  overflow-x: hidden;
+  min-width: 0;
 }
 
 .universal-chat-row p {
@@ -507,6 +510,8 @@ body {
   border-radius: 16px;
   border: 1px solid #dfe1e5;
   overflow: hidden;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .code-header {
@@ -516,6 +521,36 @@ body {
   justify-content: space-between;
   color: #5f6368;
   font-size: 12px;
+}
+
+.code-pre {
+  margin: 0;
+  padding: 16px;
+  overflow-x: auto;
+  background-color: transparent;
+}
+
+.code-content {
+  font-family: "Roboto Mono", monospace;
+  font-size: 14px;
+  line-height: 1.5;
+  white-space: pre;
+}
+
+.code-action-btn {
+  background: transparent;
+  border: none;
+  color: #5f6368;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.code-action-btn:hover {
+  background-color: #e8eaed;
 }
 
 .footer-disclaimer {

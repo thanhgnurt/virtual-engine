@@ -343,6 +343,9 @@ function App() {
     const userIdx = total - 2;
     const aiIdx = total - 1;
     
+    // Pre-allocate height for the AI message so scrollToIndex is accurate
+    chatbot.updateItemHeight(aiIdx, window.innerHeight * 0.8);
+    
     // Scroll the NEW user message to the top
     chatbot.scrollToIndex(userIdx);
     activeAiIdxRef.current = aiIdx;
