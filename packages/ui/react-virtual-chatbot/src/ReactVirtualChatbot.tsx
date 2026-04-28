@@ -9,106 +9,16 @@ import React, {
 } from "react";
 import { VirtualChatbot, VirtualChatbotRange } from "virtual-chatbot";
 import { SCROLL_STOP_DELAY, setTextNode } from "virtual-engine";
+import {
+  IVirtualChatRowHandle,
+  ReactVirtualChatbotHandle,
+  ReactVirtualChatbotProps,
+} from "./types";
 
 export { setTextNode };
 
 // ─────────────────────────────────────────────
-// Types
-// ─────────────────────────────────────────────
-
-/**
- * A ultra-high performance text component that updates via direct DOM
- * manipulation using setTextNode helper.
- * Use this inside renderItem for maximum streaming performance.
- */
-export const VirtualChatText = memo(
-  ({ text, className }: { text: string; className?: string }) => {
-    const ref = useRef<HTMLDivElement>(null);
-
-    // Initial render set
-    useLayoutEffect(() => {
-      if (ref.current) setTextNode(ref.current, text);
-    }, [text]);
-
-    return <div ref={ref} className={className} />;
-  },
-);
-
-/**
- * Handle used by the engine to imperatively update a visible message slot.
- */
-export interface IVirtualChatRowHandle<T = unknown> {
-  update: (
-    item: T | null,
-    index: number,
-    rowElement: HTMLDivElement | null,
-    isVisible: boolean,
-  ) => void;
-  updateText: (text: string) => void;
-}
-
-export interface ReactVirtualChatbotProps<T> {
-  /** The list of messages to display */
-  items: ArrayLike<T>;
-  /** Fixed height of each message (REQUIRED for this baseline) */
-  itemHeight: number;
-  /** Height of the scroll container */
-  height?: number;
-  /** Width of the scroll container */
-  width?: string | number;
-  /** Number of buffer rows to render outside visible area */
-  bufferRow?: number;
-  /** Optional class for the container */
-  className?: string;
-  /** Function to render each message */
-  renderItem: (
-    item: T | null,
-    index: number,
-  ) => React.ReactElement<{ ref?: React.Ref<IVirtualChatRowHandle<T>> }>;
-  /** Whether to automatically scroll to bottom on new items */
-  followOutput?: boolean;
-  /** Optional custom component to render as the 'Thinking' indicator */
-  renderTypingIndicator?: () => React.ReactNode;
-}
-
-export interface ReactVirtualChatbotHandle<T = any> {
-  readonly element: HTMLDivElement | null;
-  scrollToBottom: () => void;
-  /**
-   * Imperatively append messages without triggering a React re-render.
-   * @param forceScroll If true, will unconditionally scroll to the bottom.
-   */
-  appendItems: (newItems: any[], forceScroll?: boolean) => void;
-  /**
-   * Show/hide a typing indicator ("AI is typing...")
-   * @param autoScroll If true, will jump to bottom. Default: true.
-   */
-  setTyping: (isVisible: boolean, autoScroll?: boolean) => void;
-  /**
-   * Specialized method to imperatively update a specific message's text node.
-   * Extremely fast, bypasses React.
-   */
-  updateMessageText: (index: number, text: string) => void;
-  /**
-   * Update the underlying data for an item and refresh its slot if visible.
-   */
-  updateItem: (index: number, newItem: T) => void;
-  /**
-   * Scroll smoothly to a specific message index.
-   */
-  scrollToIndex: (index: number) => void;
-  /**
-   * Set a temporary bottom buffer to allow the last message to scroll to top.
-   */
-  setBottomBuffer: (height: number) => void;
-  /**
-   * Get the true total number of chat items managed internally.
-   */
-  getTotalCount: () => number;
-}
-
-// ─────────────────────────────────────────────
-// Sub-components
+// Sub-components (Internal to the Engine)
 // ─────────────────────────────────────────────
 
 /**
@@ -165,7 +75,8 @@ const ReactVirtualChatbotInner = <T,>(
   const typingRef = useRef<HTMLDivElement>(null);
   const rafId = useRef<number | null>(null);
   const prevScrollTime = useRef(performance.now());
-  const isAtBottomRef = useRef(false); // Default to false to avoid jumping on refresh
+  const isAtBottomRef = useRef(false); // Tracks whether user is at the bottom
+  const initialScrollDoneRef = useRef(false); // Guard: only auto-scroll once on mount
   const bufferHeightRef = useRef(0);
   const targetHeightRef = useRef(0);
 
@@ -238,9 +149,6 @@ const ReactVirtualChatbotInner = <T,>(
           // 2. Imperative Content Update
           const slotHandle = refsRef.current[s];
           if (slotHandle) {
-            console.log(
-              `[updateUI] Re-binding slot ${s} to index ${i} at top ${top}px`,
-            );
             slotHandle.update(item, i, wrapper, isVisible);
 
             // Initial measurement
@@ -271,8 +179,6 @@ const ReactVirtualChatbotInner = <T,>(
         const content = contentRef.current;
 
         // 1. Update Content Height with Compensation
-        // We ensure the content height is at least targetHeightRef.current
-        // but also accounts for any manual elastic shrinkage.
         if (content) {
           const actualHeight = engine.getTotalHeight();
           const compensatedHeight = Math.max(
@@ -289,7 +195,6 @@ const ReactVirtualChatbotInner = <T,>(
         }
 
         // 3. Re-position follow-on visible slots immediately
-        // This is faster than a full updateUI loop.
         for (let s = 0; s < poolSize; s++) {
           const si = lastIndicesRef.current[s];
           if (si > index) {
@@ -306,8 +211,6 @@ const ReactVirtualChatbotInner = <T,>(
     const pool = poolSize;
     const items = [];
 
-    // CRITICAL: Reset trackers when pool is recreated to force updateUI
-    // to apply styles to the BRAND NEW DOM nodes.
     lastIdsRef.current.fill(null);
     lastIndicesRef.current.fill(-2);
     lastVisRef.current.fill(0);
@@ -342,7 +245,6 @@ const ReactVirtualChatbotInner = <T,>(
     return items;
   }, [poolSize, renderItem]);
 
-  // Synchronize UI whenever the engine or the node pool changes (e.g. on resize)
   useLayoutEffect(() => {
     const el = containerRef.current;
     const st = el ? el.scrollTop : 0;
@@ -351,7 +253,6 @@ const ReactVirtualChatbotInner = <T,>(
     updateUI(engine.computeRange(st));
   }, [engine, nodePool, updateUI]);
 
-  // Handle async height changes (images, etc.)
   useLayoutEffect(() => {
     const observer = new ResizeObserver((entries) => {
       for (const entry of entries) {
@@ -375,7 +276,6 @@ const ReactVirtualChatbotInner = <T,>(
     return () => observer.disconnect();
   }, [poolSize, nodePool, syncHeight]);
 
-  // Sync scroll and range
   const updateRange = useCallback(
     (scrollTop: number) => {
       const velocity = engine.updateVelocity(scrollTop, performance.now());
@@ -387,7 +287,6 @@ const ReactVirtualChatbotInner = <T,>(
       if (next.changed) {
         rangeRef.current.start = next.start;
         rangeRef.current.end = next.end;
-        // updateUI is now purely imperative. 0 React renders.
         updateUI(rangeRef.current);
       }
     },
@@ -403,21 +302,14 @@ const ReactVirtualChatbotInner = <T,>(
       const sh = el.scrollHeight;
       const ch = el.clientHeight;
 
-      // 1. Elastic Buffer Logic:
-      // Instead of a fixed buffer, we make it shrink as the user scrolls up.
-      // This ensures that the whitespace disappears gracefully when reading history.
       const actualContentHeight = engine.getTotalHeight();
       const distanceToBottom = Math.max(0, actualContentHeight - ch - st);
 
-      // We only apply this if we have an active focus buffer (e.g. from handleSend)
       if (bufferHeightRef.current > 0) {
-        // Shrink the buffer linearly as we scroll up.
-        // It becomes 0 when we are 'viewH' pixels away from the bottom.
         const elasticBuffer = Math.max(0, viewH - distanceToBottom);
 
         if (elasticBuffer !== bufferHeightRef.current) {
           bufferHeightRef.current = elasticBuffer;
-          // When shrinking elastically, we also need to shrink the targetHeight
           targetHeightRef.current = actualContentHeight + elasticBuffer;
           if (contentRef.current) {
             contentRef.current.style.height = `${targetHeightRef.current}px`;
@@ -443,7 +335,6 @@ const ReactVirtualChatbotInner = <T,>(
       }
     };
 
-    // Initialize isAtBottomRef based on current scroll position
     const sh = el.scrollHeight;
     const st = el.scrollTop;
     const ch = el.clientHeight;
@@ -461,26 +352,46 @@ const ReactVirtualChatbotInner = <T,>(
       el.removeEventListener("scroll", handleScroll);
       if (rafId.current !== null) cancelAnimationFrame(rafId.current);
     };
-  }, [engine, updateRange, updateUI]);
+  }, [engine, updateRange, updateUI, viewH]);
 
-  // Initial scroll to bottom and handling item updates
   useLayoutEffect(() => {
     const el = containerRef.current;
     if (!el) return;
 
     engine.updateOptions({ totalCount: itemsRef.current.length });
 
-    // Race condition fix:
-    // Only force scroll-to-bottom if we are actually at the bottom OR if no scroll position was restored.
-    // If el.scrollTop > 0, it means the browser likely restored a scroll position.
+    if (initialScrollDoneRef.current) {
+      if (followOutput && isAtBottomRef.current) {
+        el.scrollTop = 10000000;
+        updateRange(el.scrollTop);
+      } else {
+        updateRange(el.scrollTop);
+      }
+      return;
+    }
+
     const isRestored = el.scrollTop > 0;
 
-    if (followOutput && isAtBottomRef.current && !isRestored) {
-      // Use a very large value to ensure we hit the bottom even if layout is still settling
-      el.scrollTop = 10000000;
-      updateRange(el.scrollTop);
+    if (followOutput && !isRestored) {
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          if (!containerRef.current) return;
+          containerRef.current.scrollTop = 10000000;
+          updateRange(containerRef.current.scrollTop);
+          isAtBottomRef.current = true;
+        });
+      });
+
+      setTimeout(() => {
+        if (!containerRef.current) return;
+        containerRef.current.scrollTop = 10000000;
+        updateRange(containerRef.current.scrollTop);
+        isAtBottomRef.current = true;
+        initialScrollDoneRef.current = true;
+      }, 200);
     } else {
       updateRange(el.scrollTop);
+      initialScrollDoneRef.current = true;
     }
   }, [engine, updateRange, followOutput]);
 
@@ -491,20 +402,12 @@ const ReactVirtualChatbotInner = <T,>(
     scrollToBottom: () => {
       const el = containerRef.current;
       if (el) {
-        // Scroll to the end of actual content, ignoring the bottom buffer
         const targetST = Math.max(0, engine.getTotalHeight() - el.clientHeight);
         el.scrollTop = targetST;
         updateRange(targetST);
       }
     },
     appendItems: (newItems: T[], forceScroll?: boolean) => {
-      const oldLength = Array.isArray(itemsRef.current)
-        ? itemsRef.current.length
-        : 0;
-      console.log("[appendItems] Called with:", newItems.length, "items.");
-      console.log("[appendItems] Old length before append:", oldLength);
-
-      // 1. Update Internal Ref (Mutable Bypass)
       if (Array.isArray(itemsRef.current)) {
         (itemsRef.current as T[]).push(...newItems);
       } else {
@@ -512,47 +415,25 @@ const ReactVirtualChatbotInner = <T,>(
       }
 
       const newLength = itemsRef.current.length;
-      console.log("[appendItems] New length after append:", newLength);
-
-      // 2. Synchronize Engine
       engine.updateOptions({ totalCount: newLength });
 
-      // 3. React to changes
       const el = containerRef.current;
       const content = contentRef.current;
 
       if (el && content) {
-        // 3. IMPORTANT: Update the spacer height imperatively
-        // because React won't re-render to update the style.height prop!
         const totalSize = engine.getTotalHeight() + bufferHeightRef.current;
         content.style.height = `${totalSize}px`;
 
-        // 4. Calculate target scroll position
         let targetST = el.scrollTop;
         if (forceScroll || (isAtBottomRef.current && followOutput)) {
-          // Normal auto-scroll only goes to the end of the ACTUAL messages
           targetST = Math.max(0, engine.getTotalHeight() - el.clientHeight);
           el.scrollTop = targetST;
-          console.log(
-            "[appendItems] Scroll Forced. targetST:",
-            targetST,
-            "Actual el.scrollTop:",
-            el.scrollTop,
-          );
         }
 
-        // 5. Force immediate UI update to catch the new items
         const velocity = engine.getVelocity();
         const next = engine.computeRange(
           targetST,
           engine.getDynamicBuffer(velocity),
-        );
-
-        console.log(
-          "[appendItems] Computed Range:",
-          next.start,
-          "to",
-          next.end,
         );
 
         rangeRef.current.start = next.start;
@@ -568,12 +449,10 @@ const ReactVirtualChatbotInner = <T,>(
         el.style.display = isVisible ? "flex" : "none";
 
         if (isVisible) {
-          // 1. Expand buffer to allow scrolling the last item to the top
           bufferHeightRef.current = 800;
           targetHeightRef.current = engine.getTotalHeight() + 800;
           if (content) content.style.height = `${targetHeightRef.current}px`;
 
-          // 2. Position typing indicator
           const top = engine.getTotalHeight();
           el.style.transform = `translateY(${top}px)`;
 
@@ -581,7 +460,6 @@ const ReactVirtualChatbotInner = <T,>(
             container.scrollTop = container.scrollHeight;
           }
         } else {
-          // 3. Remove buffer when typing finishes
           bufferHeightRef.current = 0;
           targetHeightRef.current = 0;
           if (content) content.style.height = `${engine.getTotalHeight()}px`;
@@ -601,15 +479,12 @@ const ReactVirtualChatbotInner = <T,>(
       }
     },
     updateItem: (index: number, newItem: T) => {
-      // 1. Update internal data
       if (Array.isArray(itemsRef.current)) {
         (itemsRef.current as T[])[index] = newItem;
       } else {
-        // Handle read-only or ArrayLike if necessary, but usually it's an array we mutate
         (itemsRef.current as any)[index] = newItem;
       }
 
-      // 2. Update DOM if visible
       for (let s = 0; s < poolSize; s++) {
         if (lastIndicesRef.current[s] === index) {
           const slot = refsRef.current[s];
@@ -628,7 +503,6 @@ const ReactVirtualChatbotInner = <T,>(
     scrollToIndex: (index: number) => {
       const el = containerRef.current;
       if (el) {
-        // Scroll to the top of the item
         const targetST = engine.getOffset(index);
         el.scrollTop = targetST;
         updateRange(targetST);
@@ -658,14 +532,12 @@ const ReactVirtualChatbotInner = <T,>(
         flexDirection: "column",
       }}
     >
-      {/* Flex Spacer: Pushes content to bottom when list is short.
-            More stable than margin-top: auto for virtualization. */}
       <div style={{ flex: "1 1 0%", minHeight: 0 }} />
 
       <div
         ref={contentRef}
         style={{
-          height: engine.getTotalHeight(), // No buffer by default
+          height: engine.getTotalHeight(),
           width: "100%",
           position: "relative",
           flexShrink: 0,
@@ -673,7 +545,6 @@ const ReactVirtualChatbotInner = <T,>(
       >
         {nodePool}
 
-        {/* Imperative Typing Indicator (Absolute within Content) */}
         <div
           ref={typingRef}
           className="typing-indicator-container"
