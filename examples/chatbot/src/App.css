@@ -1,12 +1,8 @@
-/* 
-  App.css is intentionally kept minimal to avoid conflicts with index.css.
-  All Gemini-like styling is centralized in the library's index.css.
-*/
-
 #root {
   height: 100vh;
   width: 100vw;
   overflow: hidden;
+  background-color: #fff;
 }
 
 .gemini-app-container {
@@ -14,6 +10,7 @@
   height: 100vh;
   width: 100vw;
   background-color: #fff;
+  color: #444746;
 }
 
 .gemini-main-content {
@@ -31,8 +28,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 0 20px;
-  background: rgba(255, 255, 255, 0.8);
-  backdrop-filter: blur(10px);
+  background: #fff;
 }
 
 .api-key-input-wrapper {
@@ -47,6 +43,7 @@
   border-radius: 20px;
   border: 1px solid #dfe1e5;
   background: #f8f9fa;
+  color: #444746;
   font-size: 14px;
   outline: none;
   transition: all 0.2s ease;
@@ -75,4 +72,99 @@
   align-items: center;
   justify-content: center;
   font-weight: 500;
+}
+
+.gemini-main {
+  flex: 1;
+  background-color: #fff;
+  position: relative;
+}
+
+/* MODAL STYLES */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: #fff;
+  width: 90%;
+  max-width: 450px;
+  border-radius: 24px;
+  padding: 24px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.modal-header h2 {
+  font-size: 20px;
+  color: #1f1f1f;
+  margin: 0;
+  font-weight: 400;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  color: #5f6368;
+  font-size: 28px;
+  cursor: pointer;
+}
+
+.model-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.model-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.model-item:hover {
+  background: #f1f3f4;
+}
+
+.model-item.active {
+  background: #e8f0fe;
+}
+
+.model-item-icon {
+  font-size: 20px;
+}
+
+.model-item-info {
+  flex: 1;
+}
+
+.model-item-name {
+  color: #1f1f1f;
+  font-weight: 500;
+  font-size: 15px;
+}
+
+.model-item-desc {
+  color: #5f6368;
+  font-size: 12px;
 }

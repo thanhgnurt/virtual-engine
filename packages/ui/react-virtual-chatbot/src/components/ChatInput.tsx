@@ -2,6 +2,8 @@ import React, { useImperativeHandle, useRef, forwardRef } from "react";
 
 export interface ChatInputProps {
   onSend: (text: string) => void;
+  onModelClick?: () => void;
+  modelName?: string;
   placeholder?: string;
   className?: string;
 }
@@ -12,7 +14,7 @@ export interface ChatInputHandle {
 
 export const ChatInput = React.memo(
   forwardRef<ChatInputHandle, ChatInputProps>(
-    ({ onSend, placeholder = "Ask Gemini", className = "" }, ref) => {
+    ({ onSend, onModelClick, modelName = "Fast", placeholder = "Ask Gemini", className = "" }, ref) => {
       const textareaRef = useRef<HTMLTextAreaElement>(null);
       const containerRef = useRef<HTMLDivElement>(null);
 
@@ -91,8 +93,8 @@ export const ChatInput = React.memo(
                 </div>
               </div>
               <div className="right-actions">
-                <div className="model-selector-new">
-                  <span>Fast</span>
+                <div className="model-selector-new" onClick={onModelClick}>
+                  <span>{modelName}</span>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M7 10l5 5 5-5H7z"/>
                   </svg>
