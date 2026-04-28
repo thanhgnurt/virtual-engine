@@ -19,6 +19,7 @@ export const ChatInput = React.memo(({ onSend, placeholder = "Ask Gemini", class
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.nativeEvent.isComposing) return;
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSend();

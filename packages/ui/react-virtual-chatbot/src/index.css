@@ -54,7 +54,9 @@
   border-radius: 50%;
   cursor: pointer;
   opacity: 0;
-  transition: opacity 0.2s, background-color 0.2s;
+  transition:
+    opacity 0.2s,
+    background-color 0.2s;
   flex-shrink: 0;
 }
 
@@ -116,14 +118,14 @@
   padding: 8px 20px 8px; /* Thinner top padding */
   width: 100%;
   max-width: var(--content-max-width);
-  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
 }
 
 .chat-input-main-card:focus-within {
-  box-shadow: 0 1px 6px rgba(32,33,36,0.15);
+  box-shadow: 0 1px 6px rgba(32, 33, 36, 0.15);
 }
 
 .chat-textarea-gemini {
@@ -131,7 +133,7 @@
   border: none;
   background: transparent;
   outline: none;
-  padding: 4px 0; /* Minimal padding */
+  padding: 8px 0; /* Minimal padding */
   font-family: inherit;
   font-size: 16px;
   resize: none;
@@ -149,7 +151,8 @@
   width: 100%;
 }
 
-.input-actions-left, .input-actions-right {
+.input-actions-left,
+.input-actions-right {
   display: flex !important;
   flex-direction: row !important;
   align-items: center !important;
@@ -228,15 +231,40 @@
 }
 
 /* HLJS VS Code Light Theme Overrides */
-.hljs-keyword, .hljs-selector-tag { color: #0000ff; }
-.hljs-string, .hljs-title, .hljs-section, .hljs-type { color: #a31515; }
-.hljs-comment, .hljs-quote { color: #008000; font-style: italic; }
-.hljs-variable, .hljs-template-variable { color: #001080; }
-.hljs-number { color: #098658; }
-.hljs-function { color: #795e26; }
-.hljs-attr { color: #e50000; }
-.hljs-property { color: #001080; }
-.hljs-params { color: #001080; }
+.hljs-keyword,
+.hljs-selector-tag {
+  color: #0000ff;
+}
+.hljs-string,
+.hljs-title,
+.hljs-section,
+.hljs-type {
+  color: #a31515;
+}
+.hljs-comment,
+.hljs-quote {
+  color: #008000;
+  font-style: italic;
+}
+.hljs-variable,
+.hljs-template-variable {
+  color: #001080;
+}
+.hljs-number {
+  color: #098658;
+}
+.hljs-function {
+  color: #795e26;
+}
+.hljs-attr {
+  color: #e50000;
+}
+.hljs-property {
+  color: #001080;
+}
+.hljs-params {
+  color: #001080;
+}
 
 /* --- Images & Media Stabilization --- */
 .virtual-chat-image-container {
@@ -245,10 +273,10 @@
   max-width: 100% !important;
   border-radius: 12px !important;
   margin: 12px 0 !important;
-  
+
   /* Placeholder & Stability - Now fully driven by JS Pixel Locking */
-  background-color: #f0f4f8 !important; 
-  
+  background-color: #f0f4f8 !important;
+
   position: relative !important;
   overflow: hidden !important;
 }
@@ -258,5 +286,5 @@
   height: 100% !important;
   object-fit: cover !important;
   display: block; /* Removed !important to allow React to hide it */
-  border: 1px solid rgba(0,0,0,0.05) !important;
+  border: 1px solid rgba(0, 0, 0, 0.05) !important;
 }

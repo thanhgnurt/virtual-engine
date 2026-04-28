@@ -468,12 +468,10 @@ const ReactVirtualChatbotInner = <T,>(
       }
     },
     appendItems: (newItems: T[], forceScroll?: boolean) => {
-      const currentItems = itemsRef.current as T[];
-      if (Array.isArray(currentItems)) {
-        currentItems.push(...newItems);
-      } else {
-        itemsRef.current = [...Array.from(itemsRef.current), ...newItems] as any;
-      }
+      // Create a NEW array to avoid mutating the original prop (Immutability)
+      const prevItems = Array.isArray(itemsRef.current) ? itemsRef.current : Array.from(itemsRef.current);
+      const nextItems = [...prevItems, ...newItems] as T[];
+      itemsRef.current = nextItems;
 
       const newLength = itemsRef.current.length;
       engine.updateOptions({ totalCount: newLength });
