@@ -8,3 +8,71 @@
   width: 100vw;
   overflow: hidden;
 }
+
+.gemini-app-container {
+  display: flex;
+  height: 100vh;
+  width: 100vw;
+  background-color: #fff;
+}
+
+.gemini-main-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+}
+
+.gemini-header {
+  height: 64px;
+  border-bottom: 1px solid #e3e3e3;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(10px);
+}
+
+.api-key-input-wrapper {
+  flex: 1;
+  max-width: 400px;
+  margin: 0 20px;
+}
+
+.api-key-input {
+  width: 100%;
+  padding: 8px 16px;
+  border-radius: 20px;
+  border: 1px solid #dfe1e5;
+  background: #f8f9fa;
+  font-size: 14px;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.api-key-input:focus {
+  background: #fff;
+  border-color: #1a73e8;
+  box-shadow: 0 1px 6px rgba(32, 33, 36, 0.28);
+}
+
+.logo-text {
+  font-size: 22px;
+  font-weight: 500;
+  color: #444746;
+  margin: 0;
+}
+
+.user-pill {
+  width: 32px;
+  height: 32px;
+  background: #7c4dff;
+  color: #fff;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 500;
+}

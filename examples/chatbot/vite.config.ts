@@ -12,6 +12,8 @@ export default defineConfig({
   },
   resolve: {
     alias: {
+      react: path.resolve(__dirname, "node_modules/react"),
+      "react-dom": path.resolve(__dirname, "node_modules/react-dom"),
       "react-virtual-chatbot": path.resolve(
         __dirname,
         "../../packages/ui/react-virtual-chatbot/src/index.ts",
