@@ -13,7 +13,7 @@ const INITIAL_MESSAGES: ChatMessage[] = [
   {
     id: "welcome",
     role: "assistant",
-    content: "Chào bạn! Tôi đã quét danh sách model từ Key của bạn. Bạn có thể nhấn vào tên model bên dưới để thay đổi nhé!",
+    content: "Chào bạn! Tôi đã sẵn sàng hỗ trợ. Bạn có thể gửi tin nhắn văn bản hoặc đính kèm ảnh để tôi phân tích nhé!",
   }
 ];
 
@@ -22,6 +22,11 @@ interface ModelInfo {
   name: string;
   desc: string;
   icon: string;
+}
+
+interface PendingFile {
+  file: File;
+  preview: string;
 }
 
 const Sidebar = () => (
@@ -40,13 +45,12 @@ function App() {
   const [apiKey, setApiKey] = useState("AIzaSyCX8Rt2cmtl1TSuAeLBHgxJweqqO2z9fC0");
   const [availableModels, setAvailableModels] = useState<ModelInfo[]>([]);
   const [selectedModel, setSelectedModel] = useState<ModelInfo | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [pendingFile, setPendingFile] = useState<PendingFile | null>(null);
   
   const chatbotRef = useRef<ReactVirtualChatbotHandle<ChatMessage>>(null);
   const inputRef = useRef<ChatInputHandle>(null);
   const activeAiIdxRef = useRef(-1);
 
-  // TỰ ĐỘNG QUÉT DANH SÁCH MODEL TỪ KEY
   useEffect(() => {
     if (!apiKey) return;
     fetch(`https://generativelanguage.googleapis.com/v1/models?key=${apiKey}`)
@@ -65,7 +69,6 @@ function App() {
               };
             });
           setAvailableModels(models);
-          // Tự động chọn model đầu tiên nếu chưa chọn hoặc model cũ không còn
           if (models.length > 0) {
             setSelectedModel(prev => models.find(m => m.id === prev?.id) || models[0]);
           }
@@ -73,6 +76,23 @@ function App() {
       })
       .catch(e => console.error("Lỗi quét model:", e));
   }, [apiKey]);
+
+  const handleFileSelect = (file: File) => {
+    const preview = URL.createObjectURL(file);
+    setPendingFile({ file, preview });
+  };
+
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => {
+        const base64String = (reader.result as string).split(",")[1];
+        resolve(base64String);
+      };
+      reader.onerror = error => reject(error);
+    });
+  };
 
   const handleSend = useCallback(async (text: string) => {
     const chatbot = chatbotRef.current;
@@ -82,24 +102,51 @@ function App() {
       chatbot.patchMetadata(activeAiIdxRef.current, { minHeight: null });
     }
 
-    const userMsg: ChatMessage = { id: `u-${Date.now()}`, role: "user", content: text };
+    let imagePart = null;
+    let userMessageContent = text;
+    if (pendingFile) {
+      try {
+        const base64 = await fileToBase64(pendingFile.file);
+        imagePart = {
+          inline_data: {
+            mime_type: pendingFile.file.type,
+            data: base64
+          }
+        };
+        userMessageContent = `![image](${pendingFile.preview})\n\n${text}`;
+      } catch (e) {
+        console.error("Lỗi xử lý ảnh:", e);
+      }
+    }
+
+    const userMsg: ChatMessage = { id: `u-${Date.now()}`, role: "user", content: userMessageContent };
     const aiMsg: ChatMessage = { id: `a-${Date.now()}`, role: "assistant", content: "...", metadata: { minHeight: "80vh" } };
 
     chatbot.appendItems([userMsg, aiMsg], false);
     const aiIdx = chatbot.getTotalCount() - 1;
-    
     chatbot.updateItemHeight(aiIdx, window.innerHeight * 0.8);
     chatbot.scrollToIndex(aiIdx - 1);
     activeAiIdxRef.current = aiIdx;
 
+    const currentPendingFile = pendingFile;
+    setPendingFile(null); 
+
     try {
       inputRef.current?.setStreaming(true);
+      
+      const contents = [{
+        parts: [
+          { text },
+          ...(imagePart ? [imagePart] : [])
+        ]
+      }];
+
       const response = await fetch(
         `https://generativelanguage.googleapis.com/v1/models/${selectedModel.id}:streamGenerateContent?alt=sse&key=${apiKey}`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ contents: [{ parts: [{ text }] }] })
+          body: JSON.stringify({ contents })
         }
       );
 
@@ -136,8 +183,9 @@ function App() {
       inputRef.current?.setStreaming(false);
       chatbot.patchMetadata(aiIdx, { minHeight: null });
       activeAiIdxRef.current = -1;
+      if (currentPendingFile) URL.revokeObjectURL(currentPendingFile.preview);
     }
-  }, [apiKey, selectedModel]);
+  }, [apiKey, selectedModel, pendingFile]);
 
   const renderMessage = useCallback((item: ChatMessage | null, index: number) => (
     <UniversalChatRow key={item?.id || index} item={item} />
@@ -177,52 +225,15 @@ function App() {
           <ChatInput 
             ref={inputRef} 
             onSend={handleSend} 
-            onModelClick={() => setIsModalOpen(true)}
-            modelName={selectedModel?.name || "Đang tải..."}
+            onFileSelect={handleFileSelect}
+            onRemoveFile={() => setPendingFile(null)}
+            selectedFileUrl={pendingFile?.preview}
+            availableModels={availableModels}
+            selectedModelId={selectedModel?.id}
+            onModelSelect={(model) => setSelectedModel(model as any)}
           />
         </footer>
       </div>
-
-      {/* MODAL LỰA CHỌN MODEL ĐỘNG */}
-      {isModalOpen && (
-        <div className="modal-overlay" onClick={() => setIsModalOpen(false)}>
-          <div className="modal-content" onClick={e => e.stopPropagation()}>
-            <div className="modal-header">
-              <h2>Chọn phiên bản khả dụng</h2>
-              <button className="close-btn" onClick={() => setIsModalOpen(false)}>&times;</button>
-            </div>
-            <div className="model-list">
-              {availableModels.length === 0 ? (
-                <div className="loading-models">Đang quét danh sách model...</div>
-              ) : (
-                availableModels.map(model => (
-                  <div 
-                    key={model.id} 
-                    className={`model-item ${selectedModel?.id === model.id ? 'active' : ''}`}
-                    onClick={() => {
-                      setSelectedModel(model);
-                      setIsModalOpen(false);
-                    }}
-                  >
-                    <div className="model-item-icon">{model.icon}</div>
-                    <div className="model-item-info">
-                      <div className="model-item-name">{model.name}</div>
-                      <div className="model-item-desc">{model.desc}</div>
-                    </div>
-                    {selectedModel?.id === model.id && (
-                      <div className="check-icon">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#a8c7fa" strokeWidth="3">
-                          <path d="M20 6L9 17l-5-5" />
-                        </svg>
-                      </div>
-                    )}
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
