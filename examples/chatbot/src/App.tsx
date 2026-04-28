@@ -131,7 +131,11 @@ Kết thúc Stress Test.`
     } else if (dice === 8) {
       parts = [
         { type: "text", content: `Hình ảnh minh họa cho topic ${TOPICS[i % TOPICS.length]}:` },
-        { type: "image", content: `https://picsum.photos/600/300?random=${i}` }
+        { 
+          type: "image", 
+          content: `https://picsum.photos/600/300?random=${i}`,
+          metadata: { aspectRatio: "2 / 1" }
+        }
       ];
     } else {
       parts = [

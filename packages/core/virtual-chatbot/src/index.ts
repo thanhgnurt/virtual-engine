@@ -204,6 +204,10 @@ export class VirtualChatbot {
     return this._offsets[index] || 0;
   }
 
+  indexAt(offset: number): number {
+    return this._binarySearch(offset);
+  }
+
   getSlotMap(
     range: VirtualChatbotRange,
     poolSize: number,

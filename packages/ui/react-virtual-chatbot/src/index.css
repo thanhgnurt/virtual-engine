@@ -190,6 +190,16 @@
 }
 
 /* Code Block */
+.virtual-chatbot-container {
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  position: relative;
+  scroll-behavior: auto !important;
+  overflow-anchor: none !important; /* Disable browser's native anchoring to avoid conflicts */
+  -webkit-overflow-scrolling: touch;
+}
+
 .virtual-chat-code-wrapper {
   margin: 16px 0;
   border-radius: 12px;
@@ -228,9 +238,25 @@
 .hljs-property { color: #001080; }
 .hljs-params { color: #001080; }
 
-/* Image Style */
-.virtual-chat-image-wrapper {
-  max-width: 100%;
-  border-radius: 16px;
-  margin: 8px 0;
+/* --- Images & Media Stabilization --- */
+.virtual-chat-image-container {
+  display: block;
+  width: 600px !important; /* Force a stable base width */
+  max-width: 100% !important;
+  border-radius: 12px !important;
+  margin: 12px 0 !important;
+  
+  /* Placeholder & Stability - Now fully driven by JS Pixel Locking */
+  background-color: #f0f4f8 !important; 
+  
+  position: relative !important;
+  overflow: hidden !important;
+}
+
+.chat-content-image {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  display: block; /* Removed !important to allow React to hide it */
+  border: 1px solid rgba(0,0,0,0.05) !important;
 }

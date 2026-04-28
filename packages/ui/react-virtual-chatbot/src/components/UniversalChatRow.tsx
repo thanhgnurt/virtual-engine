@@ -65,7 +65,7 @@ export const UniversalChatRow = memo(
               codeRef.current?.update(part.content, part.metadata);
             } else if (part.type === "image") {
               imageRef.current?.setVisible(true);
-              imageRef.current?.update(part.metadata?.url || part.content);
+              imageRef.current?.update(part.metadata?.url || part.content, part.metadata);
             }
           });
         } else {

@@ -80,6 +80,7 @@ const ReactVirtualChatbotInner = <T,>(
   const bufferHeightRef = useRef(0);
   const targetHeightRef = useRef(0);
   const viewHRef = useRef(600);
+  const isAnchoringRef = useRef(false);
 
   const itemsRef = useRef(items);
   itemsRef.current = items;
@@ -114,14 +115,92 @@ const ReactVirtualChatbotInner = <T,>(
   const lastIdsRef = useRef<(unknown | null)[]>(new Array(MAX_POOL).fill(null));
   const lastIndicesRef = useRef<Int32Array>(new Int32Array(MAX_POOL).fill(-2));
   const lastVisRef = useRef<Uint8Array>(new Uint8Array(MAX_POOL).fill(0));
+  const lastOffsetsRef = useRef<Float64Array>(new Float64Array(MAX_POOL).fill(-1));
 
   const poolSize = useMemo(
     () => engine.getPoolSize(POOL_OVERHEAD, MAX_POOL),
     [engine],
   );
 
+  // --- STABLE ANCHORING ENGINE ---
+  const anchorRef = useRef({ index: -1, offset: 0 });
+
+  const recordAnchor = useCallback(() => {
+    const container = containerRef.current;
+    if (!container) return;
+    const st = container.scrollTop;
+    const idx = engine.indexAt(st);
+    if (idx >= 0) {
+      anchorRef.current = {
+        index: idx,
+        offset: engine.getOffset(idx) - st,
+      };
+    }
+  }, [engine]);
+
+  const applyAnchor = useCallback(() => {
+    const container = containerRef.current;
+    const { index, offset } = anchorRef.current;
+    if (!container || index < 0) return;
+
+    const newOffset = engine.getOffset(index);
+    const targetScrollTop = newOffset - offset;
+
+    if (Math.abs(container.scrollTop - targetScrollTop) > 0.5) {
+      isAnchoringRef.current = true;
+      container.scrollTop = targetScrollTop;
+      queueMicrotask(() => {
+        isAnchoringRef.current = false;
+      });
+    }
+  }, [engine]);
+
+  // Synchronize height of a slot and perform scroll anchoring / shifting
+  const syncHeight = useCallback(
+    (index: number, slotIndex: number) => {
+      const wrapper = wrapperRefs.current[slotIndex];
+      const container = containerRef.current;
+      if (!wrapper || index < 0 || !container) return;
+
+      const h = wrapper.offsetHeight;
+      if (h <= 0) return;
+
+      const oldH = engine.getHeight(index);
+      if (Math.abs(h - oldH) < 0.5) return; // Ignore micro changes
+
+      const changed = engine.setHeight(index, h);
+
+      if (changed) {
+        if (container.style.scrollBehavior !== "auto") {
+          container.style.scrollBehavior = "auto";
+        }
+
+        const content = contentRef.current;
+        if (content) {
+          content.style.height = `${engine.getTotalHeight()}px`;
+        }
+
+        // Reposition only subsequent visible slots
+        for (let s = 0; s < poolSize; s++) {
+          const si = lastIndicesRef.current[s];
+          if (si > index) {
+            const w = wrapperRefs.current[s];
+            const newOffset = engine.getOffset(si);
+            if (w && lastOffsetsRef.current[s] !== newOffset) {
+              w.style.transform = `translateY(${newOffset}px)`;
+              lastOffsetsRef.current[s] = newOffset;
+            }
+          }
+        }
+      }
+    },
+    [engine, poolSize],
+  );
+
   const updateUI = useCallback(
     (newRange?: VirtualChatbotRange) => {
+      recordAnchor(); // Capture position before changes
+
       const range = newRange || rangeRef.current;
       const its = itemsRef.current;
       const pool = poolSize;
@@ -141,7 +220,6 @@ const ReactVirtualChatbotInner = <T,>(
           const wrapper = wrapperRefs.current[s];
           const top = isOutOfRange ? -9999 : engine.getOffset(i);
 
-          // 1. Direct DOM positioning (Bypass React)
           if (wrapper) {
             wrapper.style.transform = `translateY(${top}px)`;
             wrapper.style.visibility = isVisible ? "visible" : "hidden";
@@ -150,21 +228,21 @@ const ReactVirtualChatbotInner = <T,>(
           lastIdsRef.current[s] = item;
           lastIndicesRef.current[s] = i;
           lastVisRef.current[s] = isVisible ? 1 : 0;
+          lastOffsetsRef.current[s] = top;
 
-          // 2. Imperative Content Update
           const slotHandle = refsRef.current[s];
-          if (slotHandle) {
+          if (slotHandle && (isContentChanged || isVisChanged)) {
             slotHandle.update(item, i, wrapper, isVisible);
-
-            // Initial measurement
             if (isVisible) {
               syncHeight(i, s);
             }
           }
         }
       }
+
+      applyAnchor(); // Restore position after all updates
     },
-    [engine, poolSize, rowH],
+    [engine, poolSize, rowH, syncHeight, recordAnchor, applyAnchor],
   );
 
   // Trigger UI update when items change
@@ -187,51 +265,6 @@ const ReactVirtualChatbotInner = <T,>(
     obs.observe(containerRef.current);
     return () => obs.disconnect();
   }, [engine, updateUI]);
-
-  // Synchronize height of a slot and perform scroll anchoring / shifting
-  const syncHeight = useCallback(
-    (index: number, slotIndex: number) => {
-      const wrapper = wrapperRefs.current[slotIndex];
-      if (!wrapper || index < 0) return;
-
-      const h = wrapper.offsetHeight;
-      if (h <= 0) return;
-
-      const oldTop = engine.getOffset(index);
-      const changed = engine.setHeight(index, h);
-
-      if (changed) {
-        const container = containerRef.current;
-        const content = contentRef.current;
-
-        // 1. Update Content Height with Compensation
-        if (content) {
-          const actualHeight = engine.getTotalHeight();
-          const compensatedHeight = Math.max(
-            actualHeight,
-            targetHeightRef.current,
-          );
-          content.style.height = `${compensatedHeight}px`;
-        }
-
-        // 2. Scroll Anchoring (Bypass jumping when content above expands)
-        if (index < rangeRef.current.start && container) {
-          const newTop = engine.getOffset(index);
-          container.scrollTop += newTop - oldTop;
-        }
-
-        // 3. Re-position follow-on visible slots immediately
-        for (let s = 0; s < poolSize; s++) {
-          const si = lastIndicesRef.current[s];
-          if (si > index) {
-            const w = wrapperRefs.current[s];
-            if (w) w.style.transform = `translateY(${engine.getOffset(si)}px)`;
-          }
-        }
-      }
-    },
-    [engine, poolSize],
-  );
 
   const nodePool = useMemo(() => {
     const pool = poolSize;
@@ -324,6 +357,7 @@ const ReactVirtualChatbotInner = <T,>(
     if (!el) return;
 
     const onRafUpdate = () => {
+      if (isAnchoringRef.current) return;
       const st = el.scrollTop;
       const sh = el.scrollHeight;
       const ch = el.clientHeight;
