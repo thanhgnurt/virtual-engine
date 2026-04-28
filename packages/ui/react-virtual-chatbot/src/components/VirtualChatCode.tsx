@@ -1,7 +1,8 @@
-import { forwardRef, useImperativeHandle, useRef, useState } from "react";
+import { forwardRef, useImperativeHandle, useRef } from "react";
 import { ISubContentHandle } from "../types";
 import hljs from "highlight.js";
 import "highlight.js/styles/vs.css"; // Base VS style
+import { setTextNode } from "../utils/dom";
 
 export const VirtualChatCode = forwardRef<ISubContentHandle, { className?: string }>(
   ({ className }, ref) => {
@@ -27,8 +28,8 @@ export const VirtualChatCode = forwardRef<ISubContentHandle, { className?: strin
             if (langRef.current) {
               langRef.current.textContent = detectedLang;
             }
-          } catch (e) {
-            codeRef.current.textContent = content;
+            } catch (e) {
+            setTextNode(codeRef.current, content);
             if (langRef.current) langRef.current.textContent = "text";
           }
         }
