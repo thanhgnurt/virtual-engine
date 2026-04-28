@@ -70,6 +70,7 @@ export interface ReactVirtualChatbotProps<T> {
 
 export interface ReactVirtualChatbotHandle<T = any> {
   readonly element: HTMLDivElement | null;
+  patchMetadata: (index: number, patch: any) => void;
   scrollToBottom: () => void;
   /**
    * Imperatively append messages without triggering a React re-render.

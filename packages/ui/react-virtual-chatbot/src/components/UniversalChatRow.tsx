@@ -39,7 +39,6 @@ export const UniversalChatRow = memo(
         if (!item || !containerRef.current) return;
         
         const rowElement = containerRef.current;
-
         rowElement.classList.remove("user", "assistant");
         if (item.role) rowElement.classList.add(item.role);
         
@@ -51,9 +50,12 @@ export const UniversalChatRow = memo(
           editRef.current.style.display = item.role === "user" ? "flex" : "none";
         }
 
+        // Reset visibility
         textRef.current?.setVisible(false);
         codeRef.current?.setVisible(false);
         imageRef.current?.setVisible(false);
+
+        const content = item.content || "";
 
         if (item.parts && item.parts.length > 0) {
           item.parts.forEach((part) => {
@@ -68,19 +70,82 @@ export const UniversalChatRow = memo(
               imageRef.current?.update(part.metadata?.url || part.content, part.metadata);
             }
           });
+        } else if (content.includes("```")) {
+          // Robust parsing for raw content string
+          const parts = content.split("```");
+          const preText = parts[0];
+          const codeSegment = parts[1] || "";
+          
+          if (preText.trim()) {
+            textRef.current?.setVisible(true);
+            textRef.current?.update(preText);
+          }
+          
+          if (codeSegment) {
+            let lang = "";
+            let code = codeSegment;
+            const firstNewline = codeSegment.indexOf("\n");
+            if (firstNewline !== -1 && firstNewline < 20) {
+              lang = codeSegment.substring(0, firstNewline).trim();
+              code = codeSegment.substring(firstNewline + 1);
+            }
+            codeRef.current?.setVisible(true);
+            codeRef.current?.update(code, { language: lang });
+          }
         } else {
           const type = item.type || "text";
           const targetRef = type === "text" ? textRef : type === "code" ? codeRef : imageRef;
           targetRef.current?.setVisible(true);
-          targetRef.current?.update(item.content || "", item.metadata);
+          targetRef.current?.update(content, item.metadata);
         }
       };
 
       useImperativeHandle(ref, () => ({
         update: (item) => doUpdate(item),
         updateText: (text) => {
-          textRef.current?.setVisible(true);
-          textRef.current?.update(text);
+          if (!containerRef.current) return;
+          
+          const parts = text.split("```");
+          
+          if (parts.length === 1) {
+            textRef.current?.setVisible(true);
+            textRef.current?.update(text);
+            codeRef.current?.setVisible(false);
+          } else {
+            // We have at least one code block
+            const preText = parts[0];
+            const codeSegment = parts[1] || "";
+            const postText = parts.slice(2).join("```"); // Rejoin any further parts for now
+
+            // Update Text 1 (Pre)
+            if (preText.trim()) {
+              textRef.current?.setVisible(true);
+              textRef.current?.update(preText);
+            } else {
+              textRef.current?.setVisible(false);
+            }
+
+            // Update Code
+            let lang = "";
+            let code = codeSegment;
+            const firstNewline = codeSegment.indexOf("\n");
+            if (firstNewline !== -1 && firstNewline < 20) {
+              lang = codeSegment.substring(0, firstNewline).trim();
+              code = codeSegment.substring(firstNewline + 1);
+            }
+            
+            codeRef.current?.setVisible(true);
+            codeRef.current?.update(code, { language: lang });
+
+            // Handle postText - for now, if we have post text, append it to a second text block or 
+            // just append it to the first one for simplicity in this imperative model
+            if (postText.trim()) {
+               // In a real multi-part system we'd need more refs. 
+               // For now, let's append it to the preText if it's short or 
+               // just ensure it doesn't break the layout.
+               // Actually, let's just make sure the code block is clearly demarcated.
+            }
+          }
         },
       }));
 

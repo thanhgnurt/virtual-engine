@@ -5,7 +5,7 @@ import "highlight.js/styles/vs.css"; // Base VS style
 
 export const VirtualChatCode = forwardRef<ISubContentHandle, { className?: string }>(
   ({ className }, ref) => {
-    const [isVisible, setIsVisible] = useState(false);
+    const containerRef = useRef<HTMLDivElement>(null);
     const codeRef = useRef<HTMLElement>(null);
     const langRef = useRef<HTMLSpanElement>(null);
 
@@ -17,10 +17,8 @@ export const VirtualChatCode = forwardRef<ISubContentHandle, { className?: strin
 
           try {
             if (detectedLang) {
-              // Use specific language if provided
               highlighted = hljs.highlight(content, { language: detectedLang }).value;
             } else {
-              // Auto-detect if no language metadata
               const result = hljs.highlightAuto(content);
               highlighted = result.value;
               detectedLang = result.language || "text";
@@ -35,15 +33,21 @@ export const VirtualChatCode = forwardRef<ISubContentHandle, { className?: strin
           }
         }
       },
-      setVisible: (visible) => setIsVisible(visible),
+      setVisible: (visible) => {
+        if (containerRef.current) {
+          containerRef.current.style.display = visible ? "block" : "none";
+        }
+      },
     }));
 
-    if (!isVisible) return null;
-
     return (
-      <div className={`virtual-chat-code-wrapper ${className || ""}`}>
+      <div 
+        ref={containerRef}
+        className={`virtual-chat-code-wrapper ${className || ""}`}
+        style={{ display: "none" }}
+      >
         <div className="code-header">
-          <span className="code-lang" ref={langRef}>javascript</span>
+          <span className="code-lang" ref={langRef}>text</span>
           <div className="code-actions">
             <button className="code-action-btn" title="Copy code">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

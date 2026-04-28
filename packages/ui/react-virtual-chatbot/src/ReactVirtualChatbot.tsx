@@ -467,6 +467,16 @@ const ReactVirtualChatbotInner = <T,>(
         updateRange(targetST);
       }
     },
+    patchMetadata: (index: number, patch: any) => {
+      const its = itemsRef.current as any[];
+      if (its && its[index]) {
+        const item = its[index];
+        const updatedMetadata = { ...(item.metadata || {}), ...patch };
+        const updatedItem = { ...item, metadata: updatedMetadata };
+        // Reuse existing updateItem logic
+        (ref as any).current.updateItem(index, updatedItem);
+      }
+    },
     appendItems: (newItems: T[], forceScroll?: boolean) => {
       // Create a NEW array to avoid mutating the original prop (Immutability)
       const prevItems = Array.isArray(itemsRef.current) ? itemsRef.current : Array.from(itemsRef.current);
@@ -526,6 +536,21 @@ const ReactVirtualChatbotInner = <T,>(
       }
     },
     updateMessageText: (index: number, text: string) => {
+      // 1. Update source data first to ensure recycling preserves the content
+      const its = itemsRef.current as any[];
+      if (its && its[index]) {
+        const item = its[index];
+        if (typeof item.content === "string") {
+          item.content = text;
+        } else if (item.parts && item.parts[0] && item.parts[0].type === "text") {
+          item.parts[0].content = text;
+        } else if (!item.parts) {
+          // Fallback if content was empty
+          item.content = text;
+        }
+      }
+
+      // 2. Update the visible slot immediately
       for (let s = 0; s < poolSize; s++) {
         if (lastIndicesRef.current[s] === index) {
           const slot = refsRef.current[s];
