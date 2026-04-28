@@ -2,6 +2,7 @@ import React, {
   forwardRef,
   memo,
   useCallback,
+  useEffect,
   useImperativeHandle,
   useLayoutEffect,
   useMemo,
@@ -59,8 +60,7 @@ const POOL_OVERHEAD = 30;
 const ReactVirtualChatbotInner = <T,>(
   {
     items,
-    itemHeight: rowH,
-    height: viewH = 600,
+    itemHeight: rowH = 100,
     width = "100%",
     bufferRow = 5,
     className,
@@ -75,10 +75,11 @@ const ReactVirtualChatbotInner = <T,>(
   const typingRef = useRef<HTMLDivElement>(null);
   const rafId = useRef<number | null>(null);
   const prevScrollTime = useRef(performance.now());
-  const isAtBottomRef = useRef(false); // Tracks whether user is at the bottom
-  const initialScrollDoneRef = useRef(false); // Guard: only auto-scroll once on mount
+  const isAtBottomRef = useRef(false);
+  const initialScrollDoneRef = useRef(false);
   const bufferHeightRef = useRef(0);
   const targetHeightRef = useRef(0);
+  const viewHRef = useRef(600);
 
   const itemsRef = useRef(items);
   itemsRef.current = items;
@@ -88,11 +89,15 @@ const ReactVirtualChatbotInner = <T,>(
       new VirtualChatbot({
         totalCount: items.length,
         estimatedItemHeight: rowH,
-        viewportHeight: viewH,
+        viewportHeight: viewHRef.current,
         buffer: bufferRow,
       }),
-    [rowH, viewH, bufferRow], // Don't recreate when items.length changes
+    [rowH, bufferRow, items.length],
   );
+
+
+
+
 
   const rangeRef = useRef<VirtualChatbotRange>({ start: 0, end: 0 });
   const slotMapRef = useRef<Int32Array>(new Int32Array(MAX_POOL));
@@ -161,6 +166,27 @@ const ReactVirtualChatbotInner = <T,>(
     },
     [engine, poolSize, rowH],
   );
+
+  // Trigger UI update when items change
+  useEffect(() => {
+    engine.updateOptions({ totalCount: items.length });
+    updateUI();
+  }, [items.length, updateUI, engine]);
+
+  // Auto-measure viewport height (Imperative)
+  useLayoutEffect(() => {
+    if (!containerRef.current) return;
+    const obs = new ResizeObserver((entries) => {
+      const h = entries[0].contentRect.height;
+      if (h > 0 && h !== viewHRef.current) {
+        viewHRef.current = h;
+        engine.updateOptions({ viewportHeight: h });
+        updateUI();
+      }
+    });
+    obs.observe(containerRef.current);
+    return () => obs.disconnect();
+  }, [engine, updateUI]);
 
   // Synchronize height of a slot and perform scroll anchoring / shifting
   const syncHeight = useCallback(
@@ -306,7 +332,7 @@ const ReactVirtualChatbotInner = <T,>(
       const distanceToBottom = Math.max(0, actualContentHeight - ch - st);
 
       if (bufferHeightRef.current > 0) {
-        const elasticBuffer = Math.max(0, viewH - distanceToBottom);
+        const elasticBuffer = Math.max(0, viewHRef.current - distanceToBottom);
 
         if (elasticBuffer !== bufferHeightRef.current) {
           bufferHeightRef.current = elasticBuffer;
@@ -352,7 +378,7 @@ const ReactVirtualChatbotInner = <T,>(
       el.removeEventListener("scroll", handleScroll);
       if (rafId.current !== null) cancelAnimationFrame(rafId.current);
     };
-  }, [engine, updateRange, updateUI, viewH]);
+  }, [engine, updateRange, updateUI]);
 
   useLayoutEffect(() => {
     const el = containerRef.current;
@@ -408,10 +434,11 @@ const ReactVirtualChatbotInner = <T,>(
       }
     },
     appendItems: (newItems: T[], forceScroll?: boolean) => {
-      if (Array.isArray(itemsRef.current)) {
-        (itemsRef.current as T[]).push(...newItems);
+      const currentItems = itemsRef.current as T[];
+      if (Array.isArray(currentItems)) {
+        currentItems.push(...newItems);
       } else {
-        itemsRef.current = [...(itemsRef.current as any), ...newItems];
+        itemsRef.current = [...Array.from(itemsRef.current), ...newItems] as any;
       }
 
       const newLength = itemsRef.current.length;
@@ -523,24 +550,19 @@ const ReactVirtualChatbotInner = <T,>(
       ref={containerRef}
       className={className}
       style={{
-        height: viewH,
+        height: "100%",
         width,
         overflowY: "scroll",
         position: "relative",
         scrollbarGutter: "stable",
-        display: "flex",
-        flexDirection: "column",
       }}
     >
-      <div style={{ flex: "1 1 0%", minHeight: 0 }} />
-
       <div
         ref={contentRef}
         style={{
-          height: engine.getTotalHeight(),
+          height: engine.getTotalHeight() + bufferHeightRef.current,
           width: "100%",
           position: "relative",
-          flexShrink: 0,
         }}
       >
         {nodePool}
@@ -601,7 +623,7 @@ const ReactVirtualChatbotInner = <T,>(
 
 export const ReactVirtualChatbot = forwardRef(ReactVirtualChatbotInner) as (<T>(
   props: ReactVirtualChatbotProps<T> & {
-    ref?: React.Ref<ReactVirtualChatbotHandle>;
+    ref?: React.Ref<ReactVirtualChatbotHandle<T>>;
   },
 ) => React.ReactElement) & { displayName?: string };
 

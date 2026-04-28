@@ -47,8 +47,8 @@ export interface IVirtualChatRowHandle<T = any> {
 export interface ReactVirtualChatbotProps<T> {
   /** The list of messages to display */
   items: ArrayLike<T>;
-  /** Fixed height of each message (REQUIRED for this baseline) */
-  itemHeight: number;
+  /** Initial estimated height of each message (Optional, defaults to 100) */
+  itemHeight?: number;
   /** Height of the scroll container */
   height?: number;
   /** Width of the scroll container */

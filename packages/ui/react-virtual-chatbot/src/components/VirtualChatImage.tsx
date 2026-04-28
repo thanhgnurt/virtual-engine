@@ -17,8 +17,8 @@ export const VirtualChatImage = memo(
     return (
       <img
         ref={domRef}
-        className={className}
-        style={{ maxWidth: "100%", borderRadius: "8px", display: "none" }}
+        className={`virtual-chat-image-wrapper ${className || ""}`}
+        style={{ display: "none" }}
         alt="Chat attachment"
       />
     );
