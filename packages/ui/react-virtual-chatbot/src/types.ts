@@ -97,6 +97,8 @@ export interface ReactVirtualChatbotHandle<T = any> {
    * Scroll smoothly to a specific message index.
    */
   scrollToIndex: (index: number) => void;
+  /** Force update the cached height of an item in the virtual engine */
+  updateItemHeight: (index: number, height: number) => void;
   /**
    * Set a temporary bottom buffer to allow the last message to scroll to top.
    */

@@ -50,6 +50,12 @@ export const UniversalChatRow = memo(
           editRef.current.style.display = item.role === "user" ? "flex" : "none";
         }
 
+        if (item.metadata?.minHeight) {
+          rowElement.style.minHeight = item.metadata.minHeight;
+        } else {
+          rowElement.style.minHeight = "";
+        }
+
         // Reset visibility
         textRef.current?.setVisible(false);
         codeRef.current?.setVisible(false);
@@ -101,7 +107,7 @@ export const UniversalChatRow = memo(
       };
 
       useImperativeHandle(ref, () => ({
-        update: (item) => doUpdate(item),
+        update: (item, _index, _rowElement, _isVisible) => doUpdate(item),
         updateText: (text) => {
           if (!containerRef.current) return;
           

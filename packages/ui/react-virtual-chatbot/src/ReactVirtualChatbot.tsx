@@ -258,6 +258,13 @@ const ReactVirtualChatbotInner = <T,>(
       if (h > 0 && h !== viewHRef.current) {
         viewHRef.current = h;
         engine.updateOptions({ viewportHeight: h });
+        
+        const el = containerRef.current;
+        if (followOutput && isAtBottomRef.current && el) {
+          const targetST = Math.max(0, engine.getTotalHeight() - h);
+          el.scrollTop = targetST;
+        }
+        
         updateUI();
       }
     });
@@ -511,6 +518,7 @@ const ReactVirtualChatbotInner = <T,>(
         if (forceScroll || (isAtBottomRef.current && followOutput)) {
           targetST = Math.max(0, engine.getTotalHeight() - el.clientHeight);
           el.scrollTop = targetST;
+          if (forceScroll) isAtBottomRef.current = true;
         }
 
         const velocity = engine.getVelocity();
@@ -575,6 +583,13 @@ const ReactVirtualChatbotInner = <T,>(
           if (slot) {
             slot.updateText(text);
             syncHeight(index, s);
+
+            // Auto-scroll if we are following output and were already at bottom
+            const el = containerRef.current;
+            if (followOutput && isAtBottomRef.current && el) {
+              const targetST = Math.max(0, engine.getTotalHeight() - el.clientHeight);
+              el.scrollTop = targetST;
+            }
           }
           break;
         }
@@ -604,10 +619,17 @@ const ReactVirtualChatbotInner = <T,>(
     },
     scrollToIndex: (index: number) => {
       const el = containerRef.current;
-      if (el) {
-        const targetST = engine.getOffset(index);
-        el.scrollTop = targetST;
-        updateRange(targetST);
+      if (el && index >= 0 && index < itemsRef.current.length) {
+        const offset = engine.getOffset(index);
+        el.scrollTop = offset;
+        updateRange(offset);
+      }
+    },
+    updateItemHeight: (index: number, height: number) => {
+      const changed = engine.setHeight(index, height);
+      if (changed && contentRef.current) {
+        contentRef.current.style.height = `${engine.getTotalHeight()}px`;
+        updateUI();
       }
     },
     setBottomBuffer: (height: number) => {
