@@ -1,13 +1,202 @@
-/* Library Styles for ReactVirtualChatbot */
+/* Global Library Styles - Gemini Precision (Final Polish - FIXED) */
 
+:root {
+  --text-main: #1f1f1f;
+  --text-secondary: #444746;
+  --bg-input-card: #ffffff;
+  --bg-user-bubble: #f0f4f9;
+  --font-main: "Google Sans", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --content-max-width: 800px;
+}
+
+/* Row Container */
+.message-row-container {
+  display: flex;
+  padding: 12px 0;
+  width: 100%;
+  box-sizing: border-box;
+  justify-content: center;
+}
+
+.message-bubble-wrapper {
+  max-width: var(--content-max-width);
+  width: 100%;
+  padding: 0 24px;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+}
+
+/* Content Row for icons alongside bubbles */
+.message-bubble-content-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.user .message-bubble-content-row {
+  justify-content: flex-end; /* Align the whole group to the right */
+}
+
+.assistant .message-bubble-content-row {
+  justify-content: flex-start;
+}
+
+/* User Edit Icon Style */
+.user-edit-icon {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #70757a;
+  border-radius: 50%;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.2s, background-color 0.2s;
+  flex-shrink: 0;
+}
+
+.message-row-container:hover .user-edit-icon {
+  opacity: 1;
+}
+
+.user-edit-icon:hover {
+  background-color: #f1f3f4;
+}
+
+/* User Bubble Styling - Compact & Professional */
+.user .universal-chat-row {
+  background-color: var(--bg-user-bubble);
+  padding: 6px 16px; /* Further reduced vertical padding */
+  border-radius: 18px;
+  display: inline-block;
+  max-width: 85%;
+  text-align: left;
+  line-height: 1.5;
+}
+
+.assistant .universal-chat-row {
+  background-color: transparent;
+  padding: 0;
+  max-width: 100%;
+  line-height: 1.6;
+}
+
+.universal-chat-row > *:first-child {
+  margin-top: 0 !important;
+}
+
+.universal-chat-row > *:last-child {
+  margin-bottom: 0 !important;
+}
+
+.universal-chat-row {
+  font-family: var(--font-main);
+  font-size: 16px;
+  color: var(--text-main);
+}
+
+/* Chat Input Style */
+.chat-input-wrapper-gemini {
+  padding: 0 24px 16px;
+  background: transparent;
+  width: 100%;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.chat-input-main-card {
+  background-color: var(--bg-input-card);
+  border: 1px solid #dfe1e5;
+  border-radius: 28px;
+  padding: 8px 20px 8px; /* Thinner top padding */
+  width: 100%;
+  max-width: var(--content-max-width);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+}
+
+.chat-input-main-card:focus-within {
+  box-shadow: 0 1px 6px rgba(32,33,36,0.15);
+}
+
+.chat-textarea-gemini {
+  width: 100%;
+  border: none;
+  background: transparent;
+  outline: none;
+  padding: 4px 0; /* Minimal padding */
+  font-family: inherit;
+  font-size: 16px;
+  resize: none;
+  height: 24px; /* Compact single line height */
+  color: var(--text-main);
+  line-height: 1.5;
+  overflow-y: auto;
+}
+
+.chat-input-bottom-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 4px;
+  width: 100%;
+}
+
+.input-actions-left, .input-actions-right {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+/* ... existing button styles ... */
+.gemini-icon-btn {
+  background: transparent !important;
+  border: none !important;
+  color: #444746 !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px !important;
+  height: 40px !important;
+  border-radius: 50% !important;
+}
+
+.gemini-tools-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: white;
+  border: 1px solid #dfe1e5;
+  padding: 6px 12px;
+  border-radius: 12px;
+  font-size: 14px;
+  color: #444746;
+}
+
+.gemini-footer-note {
+  font-size: 12px;
+  color: #70757a;
+  text-align: center;
+  margin-top: 12px;
+  width: 100%;
+}
+
+/* Code Block */
 .virtual-chat-code-wrapper {
   margin: 16px 0;
   border-radius: 12px;
   overflow: hidden;
   background-color: #f8fafd;
   border: 1px solid #eef2f6;
-  width: 100%;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+  text-align: left;
 }
 
 .code-header {
@@ -16,76 +205,32 @@
   align-items: center;
   padding: 10px 16px;
   background-color: #f0f4f9;
-  border-bottom: 1px solid #eef2f6;
-  user-select: none;
-}
-
-.code-lang {
-  font-size: 13px;
-  font-weight: 500;
-  color: #444746;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-}
-
-.code-actions {
-  display: flex;
-  gap: 12px;
-}
-
-.code-action-btn {
-  background: transparent !important;
-  border: none !important;
-  padding: 6px !important;
-  border-radius: 6px !important;
-  color: #444746 !important;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s;
-  outline: none;
-}
-
-.code-action-btn:hover {
-  background-color: #e3e7ed !important;
-  color: #1f1f1f !important;
-}
-
-.code-action-btn svg {
-  display: block;
 }
 
 .code-content {
   margin: 0 !important;
-  padding: 16px !important;
-  overflow-x: auto;
-  font-family: "Google Sans Mono", "Roboto Mono", "Courier New", monospace !important;
+  padding: 20px !important;
+  background-color: #f8fafd !important;
+  font-family: "Google Sans Mono", "Roboto Mono", monospace !important;
   font-size: 14px !important;
-  line-height: 1.6 !important;
-  color: #1f1f1f !important;
-  background-color: transparent !important;
-  border: none !important;
+  color: #3b3b3b !important;
+  line-height: 1.5 !important;
 }
 
-.code-content code {
-  font-family: inherit !important;
-  white-space: pre !important;
-  background: transparent !important;
-  padding: 0 !important;
-  border-radius: 0 !important;
-}
+/* HLJS VS Code Light Theme Overrides */
+.hljs-keyword, .hljs-selector-tag { color: #0000ff; }
+.hljs-string, .hljs-title, .hljs-section, .hljs-type { color: #a31515; }
+.hljs-comment, .hljs-quote { color: #008000; font-style: italic; }
+.hljs-variable, .hljs-template-variable { color: #001080; }
+.hljs-number { color: #098658; }
+.hljs-function { color: #795e26; }
+.hljs-attr { color: #e50000; }
+.hljs-property { color: #001080; }
+.hljs-params { color: #001080; }
 
-/* Gemini Image Style */
+/* Image Style */
 .virtual-chat-image-wrapper {
   max-width: 100%;
   border-radius: 16px;
-  border: 1px solid #eef2f6;
-  margin: 12px 0;
-  display: block;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.05);
-  transition: transform 0.2s ease;
-}
-
-.virtual-chat-image-wrapper:hover {
-  transform: scale(1.005);
+  margin: 8px 0;
 }
