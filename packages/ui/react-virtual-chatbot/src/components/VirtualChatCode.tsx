@@ -108,7 +108,10 @@ export const VirtualChatCode = forwardRef<ISubContentHandle, { className?: strin
         }
 
         if (codeRef.current) {
-           if (codeHighlighting && content.length < 5000) {
+           const isLoading = metadata?.isLoading === true;
+           // During streaming, only highlight if length < 15000 for performance
+           // After streaming (isLoading === false), ALWAYS highlight one last time
+           if (codeHighlighting && (content.length < 15000 || !isLoading)) {
                forceRender();
            } else {
                setTextNode(codeRef.current, content);

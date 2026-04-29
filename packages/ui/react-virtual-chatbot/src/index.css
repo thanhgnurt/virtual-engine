@@ -639,23 +639,29 @@ body {
 /* Code Block Styling - Gemini 2.0 Redesign */
 .virtual-chat-code-wrapper {
   margin: 16px 0;
-  border-radius: 16px;
-  background-color: #f0f4f9;
+  border-radius: 12px;
+  background-color: #f8f9fa; /* Light Background */
   overflow: hidden;
   max-width: 100%;
   box-sizing: border-box;
+  border: 1px solid #e1e3e1;
 }
 
 .code-header {
   padding: 4px 16px;
-  background-color: #f0f4f9;
+  background-color: #f8f9fa;
   display: flex;
   justify-content: space-between;
   align-items: center;
   color: #444746;
-  font-size: 14px;
+  font-size: 13px;
+  border-bottom: 1px solid white;
+}
+
+.code-lang {
+  color: #abb2bf;
   font-weight: 500;
-  border-bottom: 1px solid white; /* Added subtle separator line */
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
 .code-header-right {
@@ -683,16 +689,16 @@ body {
   font-size: 14px;
   line-height: 1.6;
   white-space: pre;
-  color: #1f1f1f;
+  color: #1f1f1f; /* Main text color for light theme */
 }
 
 .code-action-btn {
-  background: transparent;
+  background: none;
   border: none;
-  color: #444746;
   cursor: pointer;
   padding: 6px;
-  border-radius: 8px;
+  border-radius: 6px;
+  color: #444746; /* Neutral dark grey for light theme */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -703,10 +709,11 @@ body {
   background-color: rgba(0, 0, 0, 0.05);
 }
 
-/* Gemini Syntax Highlighting Theme (Light) */
+/* Light Syntax Palette */
 .hljs-keyword,
 .hljs-selector-tag {
-  color: #0000ff; /* VS Code Blue for const, let, var */
+  color: #2a2af6; /* Blue */
+  font-weight: 600;
 }
 
 .hljs-keyword:is(
@@ -715,45 +722,45 @@ body {
   [class*="await"],
   [class*="new"],
   [class*="if"],
-  [class*="else"]
+  [class*="else"],
+  [class*="for"],
+  [class*="while"]
 ) {
-  color: #af00db; /* VS Code Purple for control flow */
+  color: #9303b7; /* Purple */
 }
 
-/* highlight.js doesn't always distinguish keywords well, so we use a general approach */
-.hljs-keyword {
-  color: #0000ff;
+.hljs-built_in,
+.hljs-type {
+  color: #267f99; /* Teal */
 }
-.hljs-built_in {
-  color: #267f99;
-} /* Teal for built-ins */
 
 .hljs-string {
-  color: #a31515; /* VS Code Dark Red */
+  color: #ca5010; /* Cam đất */
 }
 
 .hljs-title,
 .hljs-title.function_,
-.hljs-title.class_ {
-  color: #795e26; /* VS Code Gold/Brown for functions */
+.hljs-function,
+.hljs-property,
+.hljs-attr {
+  color: #c79602; /* Vàng đậm */
+  font-weight: 500;
 }
 
 .hljs-comment {
-  color: #008000; /* VS Code Green */
+  color: #008000; /* Green */
 }
 
 .hljs-number,
 .hljs-literal {
-  color: #098658; /* VS Code Dark Cyan/Green */
+  color: #098658; /* Cyan/Green */
 }
 
 .hljs-variable,
-.hljs-attr {
-  color: #001080; /* VS Code Navy Blue */
-}
-
-.hljs-keyword {
-  font-weight: normal;
+.hljs-params,
+.hljs-template-tag,
+.hljs-link {
+  color: #001080; /* Navy Blue */
 }
 
 .footer-disclaimer {
