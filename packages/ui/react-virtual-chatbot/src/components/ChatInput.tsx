@@ -8,6 +8,7 @@ export interface ModelOption {
 
 export interface ChatInputProps {
   onSend: (text: string) => void;
+  onStop?: () => void;
   onFileSelect?: (file: File) => void;
   onRemoveFile?: () => void;
   selectedFileUrl?: string | null;
@@ -26,6 +27,7 @@ export const ChatInput = React.memo(
   forwardRef<ChatInputHandle, ChatInputProps>(
     ({ 
       onSend, 
+      onStop,
       onFileSelect, 
       onRemoveFile, 
       selectedFileUrl, 
@@ -40,9 +42,11 @@ export const ChatInput = React.memo(
       const fileInputRef = useRef<HTMLInputElement>(null);
       const [isAttachMenuOpen, setIsAttachMenuOpen] = useState(false);
       const [isModelMenuOpen, setIsModelMenuOpen] = useState(false);
+      const [isStreaming, setIsStreaming] = useState(false);
 
       useImperativeHandle(ref, () => ({
         setStreaming: (streaming: boolean) => {
+          setIsStreaming(streaming);
           const container = containerRef.current;
           const textarea = textareaRef.current;
           if (container) {
@@ -213,7 +217,16 @@ export const ChatInput = React.memo(
                   )}
                 </div>
 
-                <button className="send-action-btn-new" onClick={handleSend}>
+                <button 
+                  className="send-action-btn-new" 
+                  onClick={() => {
+                    if (isStreaming) {
+                      if (onStop) onStop();
+                    } else {
+                      handleSend();
+                    }
+                  }}
+                >
                   <div className="icon-slot">
                     <svg className="mic-mic-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
                       <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v4M8 23h8" strokeLinecap="round"/>
@@ -221,8 +234,8 @@ export const ChatInput = React.memo(
                     <svg className="send-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
                       <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" strokeLinecap="round" strokeLinejoin="round"/>
                     </svg>
-                    <svg className="pause-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                      <rect x="6" y="4" width="3" height="16" rx="1"/><rect x="15" y="4" width="3" height="16" rx="1"/>
+                    <svg className="pause-icon" width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                      <rect x="4" y="4" width="16" height="16" rx="2"/>
                     </svg>
                   </div>
                 </button>

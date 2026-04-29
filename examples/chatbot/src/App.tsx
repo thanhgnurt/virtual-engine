@@ -111,9 +111,23 @@ function App() {
     });
   };
 
+  const abortControllerRef = useRef<AbortController | null>(null);
+
+  const handleStop = useCallback(() => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+  }, []);
+
   const handleSend = useCallback(async (text: string) => {
     const chatbot = chatbotRef.current;
     if (!chatbot || !apiKey || !selectedModel) return;
+
+    // Abort any existing stream
+    handleStop();
+    abortControllerRef.current = new AbortController();
+    const signal = abortControllerRef.current.signal;
 
     if (activeAiIdxRef.current !== -1) {
       chatbot.patchMetadata(activeAiIdxRef.current, { minHeight: null, isLoading: false });
@@ -171,6 +185,7 @@ function App() {
     const currentPendingFile = pendingFile;
     setPendingFile(null); 
 
+    let fullText = "";
     try {
       inputRef.current?.setStreaming(true);
       
@@ -194,7 +209,8 @@ function App() {
           model: selectedModel.id,
           messages: messages,
           stream: true
-        })
+        }),
+        signal: signal
       });
 
       if (!response.ok) {
@@ -205,7 +221,6 @@ function App() {
       const reader = response.body?.getReader();
       if (!reader) throw new Error("Không thể đọc luồng dữ liệu.");
 
-      let fullText = "";
       const decoder = new TextDecoder();
 
       while (true) {
@@ -234,7 +249,12 @@ function App() {
       }
       setHistory(prev => [...prev, { role: "assistant", content: fullText }]);
     } catch (error: any) {
-      chatbot.updateMessageText(aiIdx, `❌ Lỗi: ${error.message}`);
+      if (error.name === 'AbortError') {
+        // When user stops the stream, we just keep what we have
+        setHistory(prev => [...prev, { role: "assistant", content: fullText }]);
+      } else {
+        chatbot.updateMessageText(aiIdx, `❌ Lỗi: ${error.message}`);
+      }
     } finally {
       inputRef.current?.setStreaming(false);
       chatbot.patchMetadata(aiIdx, { minHeight: null, isLoading: false });
@@ -292,6 +312,7 @@ function App() {
           <ChatInput 
             ref={inputRef} 
             onSend={handleSend} 
+            onStop={handleStop}
             onFileSelect={handleFileSelect}
             onRemoveFile={() => setPendingFile(null)}
             selectedFileUrl={pendingFile?.preview}
