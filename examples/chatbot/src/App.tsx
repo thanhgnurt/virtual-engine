@@ -129,7 +129,7 @@ function App() {
     const aiMsg: ChatMessage = { 
       id: `a-${Date.now()}`, 
       role: "assistant", 
-      content: "...", 
+      content: "", 
       metadata: { minHeight: "80vh", isLoading: true } 
     };
 

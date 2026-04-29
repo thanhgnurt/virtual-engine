@@ -7,14 +7,7 @@ import {
 import { VirtualChatCode } from "./VirtualChatCode";
 import { VirtualChatImage } from "./VirtualChatImage";
 import { VirtualChatText } from "./VirtualChatText";
-
-const GeminiSparkIcon = () => (
-  <div className="gemini-spark-icon">
-    <svg viewBox="0 0 24 24" fill="currentColor">
-      <path d="M12 2L14.5 9.5L22 12L14.5 14.5L12 22L9.5 14.5L2 12L9.5 9.5L12 2Z" />
-    </svg>
-  </div>
-);
+import { GeminiSparkle } from "./GeminiSparkle";
 
 const UserEditIcon = () => (
   <div className="user-edit-icon">
@@ -32,6 +25,7 @@ export const UniversalChatRow = memo(
       const codeRef = useRef<ISubContentHandle>(null);
       const imageRef = useRef<ISubContentHandle>(null);
       const sparkRef = useRef<HTMLDivElement>(null);
+      const dotsRef = useRef<HTMLDivElement>(null);
       const editRef = useRef<HTMLDivElement>(null);
       const containerRef = useRef<HTMLDivElement>(null);
 
@@ -42,8 +36,20 @@ export const UniversalChatRow = memo(
         rowElement.classList.remove("user", "assistant");
         if (item.role) rowElement.classList.add(item.role);
         
+        const isLoading = item.metadata?.isLoading === true;
+        const hasContent = !!(item.content || (item.parts && item.parts.length > 0));
+
         if (sparkRef.current) {
-          sparkRef.current.style.display = item.role === "assistant" ? "block" : "none";
+          sparkRef.current.style.display = item.role === "assistant" ? "flex" : "none";
+          const sparkleCont = sparkRef.current.querySelector('.gemini-sparkle');
+          if (sparkleCont) {
+            if (isLoading) sparkleCont.classList.add('is-loading');
+            else sparkleCont.classList.remove('is-loading');
+          }
+        }
+
+        if (dotsRef.current) {
+          dotsRef.current.style.display = (isLoading && !hasContent) ? "flex" : "none";
         }
         
         if (editRef.current) {
@@ -77,7 +83,6 @@ export const UniversalChatRow = memo(
             }
           });
         } else if (content.includes("```")) {
-          // Robust parsing for raw content string
           const parts = content.split("```");
           const preText = parts[0];
           const codeSegment = parts[1] || "";
@@ -98,7 +103,7 @@ export const UniversalChatRow = memo(
             codeRef.current?.setVisible(true);
             codeRef.current?.update(code, { language: lang });
           }
-        } else {
+        } else if (content) {
           const type = item.type || "text";
           const targetRef = type === "text" ? textRef : type === "code" ? codeRef : imageRef;
           targetRef.current?.setVisible(true);
@@ -111,6 +116,8 @@ export const UniversalChatRow = memo(
         updateText: (text) => {
           if (!containerRef.current) return;
           
+          if (dotsRef.current) dotsRef.current.style.display = "none";
+
           const parts = text.split("```");
           
           if (parts.length === 1) {
@@ -118,12 +125,10 @@ export const UniversalChatRow = memo(
             textRef.current?.update(text);
             codeRef.current?.setVisible(false);
           } else {
-            // We have at least one code block
             const preText = parts[0];
             const codeSegment = parts[1] || "";
-            const postText = parts.slice(2).join("```"); // Rejoin any further parts for now
+            const postText = parts.slice(2).join("```");
 
-            // Update Text 1 (Pre)
             if (preText.trim()) {
               textRef.current?.setVisible(true);
               textRef.current?.update(preText);
@@ -131,7 +136,6 @@ export const UniversalChatRow = memo(
               textRef.current?.setVisible(false);
             }
 
-            // Update Code
             let lang = "";
             let code = codeSegment;
             const firstNewline = codeSegment.indexOf("\n");
@@ -142,15 +146,6 @@ export const UniversalChatRow = memo(
             
             codeRef.current?.setVisible(true);
             codeRef.current?.update(code, { language: lang });
-
-            // Handle postText - for now, if we have post text, append it to a second text block or 
-            // just append it to the first one for simplicity in this imperative model
-            if (postText.trim()) {
-               // In a real multi-part system we'd need more refs. 
-               // For now, let's append it to the preText if it's short or 
-               // just ensure it doesn't break the layout.
-               // Actually, let's just make sure the code block is clearly demarcated.
-            }
           }
         },
       }));
@@ -161,8 +156,13 @@ export const UniversalChatRow = memo(
 
       return (
         <div ref={containerRef} className={`message-row-container ${className || ""}`}>
-          <div ref={sparkRef} style={{ display: "none" }}>
-            <GeminiSparkIcon />
+          <div ref={sparkRef} className="ai-message-prefix" style={{ display: "none" }}>
+            <GeminiSparkle isLoading={initialItem?.metadata?.isLoading} />
+            <div ref={dotsRef} className="gemini-typing-dots" style={{ display: "none" }}>
+              <span></span>
+              <span></span>
+              <span></span>
+            </div>
           </div>
           <div className="message-bubble-wrapper">
             <div className="message-bubble-content-row">
