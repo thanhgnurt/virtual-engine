@@ -3,31 +3,17 @@ import {
   ChatInput,
   type ChatInputHandle,
   ChatMessage,
-  GeminiSparkle,
   ReactVirtualChatbot,
   ReactVirtualChatbotHandle,
-  UniversalChatRow,
+  IChatFetcher
 } from "react-virtual-chatbot";
 import "./App.css";
-
-const INITIAL_MESSAGES: ChatMessage[] = [
-  {
-    id: "welcome",
-    role: "assistant",
-    content: "Chào bạn! Tôi đã kết nối với OpenRouter. Bạn có thể chọn bất kỳ model nào (GPT-4, Claude, Gemini...) để trò chuyện nhé!",
-  }
-];
 
 interface ModelInfo {
   id: string;
   name: string;
   desc: string;
   icon: string;
-}
-
-interface PendingFile {
-  file: File;
-  preview: string;
 }
 
 const Sidebar = () => (
@@ -45,13 +31,57 @@ const Sidebar = () => (
 function App() {
   const [apiKey, setApiKey] = useState("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");
   const [availableModels, setAvailableModels] = useState<ModelInfo[]>([]);
-  const [selectedModel, setSelectedModel] = useState<ModelInfo | null>(null);
-  const [pendingFile, setPendingFile] = useState<PendingFile | null>(null);
-  const [history, setHistory] = useState<{ role: string; content: string }[]>([]);
+  const [chatState, setChatState] = useState<any>({ isStreaming: false, selectedModelId: '' });
   
   const chatbotRef = useRef<ReactVirtualChatbotHandle<ChatMessage>>(null);
   const inputRef = useRef<ChatInputHandle>(null);
-  const activeAiIdxRef = useRef(-1);
+
+  // --- 1. Fallback Fetcher Implementation ---
+  const fallbackFetcher = useRef<IChatFetcher>({
+    async *fetchStream(params: any) {
+      const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${params.apiKey}`,
+          "Content-Type": "application/json",
+          "HTTP-Referer": window.location.origin,
+          "X-Title": "Virtual Chatbot"
+        },
+        body: JSON.stringify({
+          model: params.modelId,
+          messages: params.messages,
+          stream: true
+        })
+      });
+
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err.error?.message || `HTTP ${response.status}`);
+      }
+
+      const reader = response.body?.getReader();
+      if (!reader) throw new Error("Could not read stream.");
+
+      const decoder = new TextDecoder();
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value, { stream: true });
+        const lines = chunk.split("\n");
+        for (const line of lines) {
+          if (line.trim() === "" || line.trim() === "data: [DONE]") continue;
+          if (line.startsWith("data: ")) {
+            try {
+              const json = JSON.parse(line.substring(6));
+              const content = json.choices?.[0]?.delta?.content || "";
+              if (content) yield content;
+            } catch (e) {}
+          }
+        }
+      }
+    }
+  }).current;
 
   // Fetch OpenRouter Models
   useEffect(() => {
@@ -73,223 +103,23 @@ function App() {
             icon: m.id.includes("gpt") ? "🤖" : m.id.includes("claude") ? "🧠" : m.id.includes("gemini") ? "✨" : "🌟"
           }));
           setAvailableModels(models);
-          if (models.length > 0) {
-            const savedModelId = localStorage.getItem("selected-model-id");
-            setSelectedModel(prev => 
-              models.find(m => m.id === savedModelId) || 
-              models.find(m => m.id === prev?.id) || 
-              models.find(m => m.id.includes("google/gemini-2.0-flash-lite:free")) || 
-              models[0]
-            );
+          if (models.length > 0 && chatbotRef.current) {
+            const models = data.data; // Use raw data if needed or already mapped
+            // The chatbot will automatically handle its own selection if we don't override it,
+            // but we can still set it here if we want to sync the very first time.
           }
         }
       })
       .catch(e => console.error("Lỗi lấy model OpenRouter:", e));
   }, [apiKey]);
 
-  // Persist Model Selection
-  useEffect(() => {
-    if (selectedModel) {
-      localStorage.setItem("selected-model-id", selectedModel.id);
-    }
-  }, [selectedModel]);
-
-  const handleFileSelect = (file: File) => {
-    const preview = URL.createObjectURL(file);
-    setPendingFile({ file, preview });
-  };
-
-  const fileToBase64 = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = () => {
-        const base64String = (reader.result as string).split(",")[1];
-        resolve(base64String);
-      };
-      reader.onerror = error => reject(error);
-    });
-  };
-
-  const abortControllerRef = useRef<AbortController | null>(null);
-
-  const handleStop = useCallback(() => {
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-      abortControllerRef.current = null;
-    }
+  const handleSend = useCallback((text: string) => {
+    chatbotRef.current?.sendMessage(text);
+    chatbotRef.current?.focusLastItem();
   }, []);
 
-  const handleSend = useCallback(async (text: string) => {
-    const chatbot = chatbotRef.current;
-    if (!chatbot || !apiKey || !selectedModel) return;
-
-    // Abort any existing stream
-    handleStop();
-    abortControllerRef.current = new AbortController();
-    const signal = abortControllerRef.current.signal;
-
-    if (activeAiIdxRef.current !== -1) {
-      chatbot.patchMetadata(activeAiIdxRef.current, { minHeight: null, isLoading: false });
-    }
-
-    let userMessageContent: any = text;
-    let visualContent = text;
-    let base64Image = "";
-
-    if (pendingFile) {
-      try {
-        base64Image = await fileToBase64(pendingFile.file);
-        visualContent = `![image](${pendingFile.preview})\n\n${text}`;
-        userMessageContent = [
-          { type: "text", text },
-          { 
-            type: "image_url", 
-            image_url: { url: `data:${pendingFile.file.type};base64,${base64Image}` } 
-          }
-        ];
-      } catch (e) {
-        console.error("Lỗi xử lý ảnh:", e);
-      }
-    }
-
-    let userMsg: ChatMessage = { id: `u-${Date.now()}`, role: "user", content: visualContent };
-    
-    if (pendingFile) {
-      userMsg.parts = [
-        { type: "image", content: pendingFile.preview },
-        { type: "text", content: text }
-      ];
-    }
-
-    let minHeight: string | null = null;
-    if (chatbot?.element) {
-        // We want the AI response to be tall enough to fill the screen
-        // Subtracting about 150px for header/input and a typical user message
-        const viewH = chatbot.element.clientHeight;
-        minHeight = `${Math.max(300, viewH - 180)}px`;
-    }
-
-    const aiMsg: ChatMessage = { 
-      id: `a-${Date.now()}`, 
-      role: "assistant", 
-      content: "", 
-      metadata: { isLoading: true, minHeight } 
-    };
-
-    chatbot.appendItems([userMsg, aiMsg], false);
-    const aiIdx = chatbot.getTotalCount() - 1;
-    chatbot.focusLastItem();
-    activeAiIdxRef.current = aiIdx;
-
-    const currentPendingFile = pendingFile;
-    setPendingFile(null); 
-
-    let fullText = "";
-    try {
-      inputRef.current?.setStreaming(true);
-      
-      const nextHistory = [...history, { role: "user", content: userMessageContent }];
-      setHistory(nextHistory);
-      
-      let messages: any[] = nextHistory.map(h => ({
-        role: h.role,
-        content: h.content
-      }));
-
-      // Support for multi-modal (images)
-      if (currentPendingFile) {
-        const lastMsg = messages[messages.length - 1];
-        const base64 = await new Promise<string>((resolve) => {
-          const reader = new FileReader();
-          reader.onloadend = () => resolve(reader.result as string);
-          reader.readAsDataURL(currentPendingFile.file);
-        });
-        
-        lastMsg.content = [
-          { type: "text", text: userMessageContent },
-          { type: "image_url", image_url: { url: base64 } }
-        ];
-      }
-
-      const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${apiKey}`,
-          "Content-Type": "application/json",
-          "HTTP-Referer": window.location.origin,
-          "X-Title": "Virtual Chatbot"
-        },
-        body: JSON.stringify({
-          model: selectedModel.id,
-          messages: messages,
-          stream: true
-        }),
-        signal: signal
-      });
-
-      if (!response.ok) {
-        const err = await response.json().catch(() => ({}));
-        throw new Error(err.error?.message || `HTTP ${response.status}`);
-      }
-
-      const reader = response.body?.getReader();
-      if (!reader) throw new Error("Không thể đọc luồng dữ liệu.");
-
-      const decoder = new TextDecoder();
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        const chunk = decoder.decode(value, { stream: true });
-        const lines = chunk.split("\n");
-        for (const line of lines) {
-          if (line.trim() === "") continue;
-          if (line.trim() === "data: [DONE]") break;
-          
-          if (line.startsWith("data: ")) {
-            try {
-              const json = JSON.parse(line.substring(6));
-              const content = json.choices?.[0]?.delta?.content || "";
-              fullText += content;
-              if (fullText) {
-                chatbot.updateMessageText(aiIdx, fullText);
-              }
-            } catch (e) {
-              // Một số chunk có thể không phải JSON hoàn chỉnh
-            }
-          }
-        }
-      }
-      setHistory(prev => [...prev, { role: "assistant", content: fullText }]);
-    } catch (error: any) {
-      if (error.name === 'AbortError') {
-        // When user stops the stream, we just keep what we have
-        setHistory(prev => [...prev, { role: "assistant", content: fullText }]);
-      } else {
-        chatbot.updateMessageText(aiIdx, `❌ Lỗi: ${error.message}`);
-      }
-    } finally {
-      inputRef.current?.setStreaming(false);
-      chatbot.patchMetadata(aiIdx, { minHeight: null, isLoading: false });
-      activeAiIdxRef.current = -1;
-      if (currentPendingFile) URL.revokeObjectURL(currentPendingFile.preview);
-    }
-  }, [apiKey, selectedModel, pendingFile]);
-
-  const renderMessage = useCallback((item: ChatMessage | null, index: number) => {
-    if (item?.role === "assistant") {
-      return (
-        <div key={item.id} className="assistant-message-wrapper">
-          <div className="ai-message-prefix">
-            <GeminiSparkle isLoading={item.metadata?.isLoading} />
-          </div>
-          <UniversalChatRow item={item} codeHighlighting={true} />
-        </div>
-      );
-    }
-    return <UniversalChatRow key={item?.id || index} item={item} codeHighlighting={true} />;
+  const handleStop = useCallback(() => {
+    chatbotRef.current?.stopStreaming();
   }, []);
 
   return (
@@ -304,7 +134,10 @@ function App() {
                 type="password" 
                 placeholder="Dán OpenRouter API Key vào đây..." 
                 value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
+                onChange={(e) => {
+                    setApiKey(e.target.value);
+                    chatbotRef.current?.setApiKey(e.target.value);
+                }}
                 className="api-key-input"
               />
             </div>
@@ -315,9 +148,9 @@ function App() {
         <main className="gemini-main">
           <ReactVirtualChatbot
             ref={chatbotRef}
-            items={INITIAL_MESSAGES}
-            renderItem={renderMessage}
-            itemHeight={100}
+            apiKey={apiKey}
+            fallbackFetcher={fallbackFetcher}
+            onStateChange={(state: any) => setChatState(state)}
             followOutput={true}
             codeHighlighting={true}
           />
@@ -328,12 +161,10 @@ function App() {
             ref={inputRef} 
             onSend={handleSend} 
             onStop={handleStop}
-            onFileSelect={handleFileSelect}
-            onRemoveFile={() => setPendingFile(null)}
-            selectedFileUrl={pendingFile?.preview}
             availableModels={availableModels}
-            selectedModelId={selectedModel?.id}
-            onModelSelect={(model) => setSelectedModel(model as any)}
+            selectedModelId={chatState.selectedModelId}
+            onModelSelect={(model) => chatbotRef.current?.setSelectedModel(model.id)}
+            isStreaming={chatState.isStreaming}
           />
         </footer>
       </div>

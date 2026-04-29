@@ -40,6 +40,7 @@ export const VirtualChatText = memo(
     }, []);
 
     useImperativeHandle(ref, () => ({
+      container: containerRef.current,
       setVisible: (visible) => {
         if (containerRef.current) {
           containerRef.current.style.display = visible ? "block" : "none";

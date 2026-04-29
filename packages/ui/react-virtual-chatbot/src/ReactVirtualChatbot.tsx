@@ -7,10 +7,12 @@ import React, {
   useLayoutEffect,
   useMemo,
   useRef,
+  useState,
 } from "react";
 import { VirtualChatbot, VirtualChatbotRange } from "virtual-chatbot";
-import { SCROLL_STOP_DELAY, setTextNode } from "virtual-engine";
+import { SCROLL_STOP_DELAY } from "virtual-engine";
 import { GeminiSparkle } from "./components/GeminiSparkle";
+import { UniversalChatRow } from "./components/UniversalChatRow";
 import {
   ChatMessage,
   IVirtualChatRowHandle,
@@ -18,11 +20,12 @@ import {
   ReactVirtualChatbotProps,
 } from "./types";
 import { RAFEngine, TickContext, TickFn } from "./utils/useRequestAnimation";
-
-export { setTextNode };
+import { ChatStore, ChatStoreOptions } from "./store";
+import { ChatProvider } from "./store/ChatContext";
+import { ChatEvent } from "./store/types";
 
 // ─────────────────────────────────────────────
-// Sub-components (Internal to the Engine)
+// Sub-components
 // ─────────────────────────────────────────────
 
 const EngineSlot = memo(
@@ -46,8 +49,22 @@ const EngineSlot = memo(
       return <>{node}</>;
     },
   ),
-  () => true, // Truly static container
+  () => true,
 );
+
+const DefaultChatRenderer = (item: ChatMessage | null, index: number, codeHighlighting?: boolean) => {
+  if (item?.role === "assistant") {
+    return (
+      <div key={item.id} className="assistant-message-wrapper">
+        <div className="ai-message-prefix">
+          <GeminiSparkle isLoading={item.metadata?.isLoading} />
+        </div>
+        <UniversalChatRow item={{...item, index} as any} codeHighlighting={codeHighlighting} />
+      </div>
+    );
+  }
+  return <UniversalChatRow key={item?.id || index} item={{...item, index} as any} codeHighlighting={codeHighlighting} />;
+};
 
 // ─────────────────────────────────────────────
 // Main Component
@@ -56,9 +73,22 @@ const EngineSlot = memo(
 const MAX_POOL = 256;
 const POOL_OVERHEAD = 30;
 
-const ReactVirtualChatbotInner = <T,>(
-  {
-    items,
+/**
+ * Extended Props for the "Black Box" Chatbot
+ */
+export interface EnhancedChatbotProps extends Partial<ReactVirtualChatbotProps<ChatMessage>> {
+  worker?: Worker;
+  fallbackFetcher?: any;
+  apiKey?: string;
+  selectedModelId?: string;
+  onStateChange?: (state: any) => void;
+}
+
+const ReactVirtualChatbotInner = (
+  props: EnhancedChatbotProps,
+  ref: React.Ref<ReactVirtualChatbotHandle<ChatMessage>>,
+) => {
+  const {
     itemHeight: rowH = 100,
     width = "100%",
     bufferRow = 5,
@@ -67,10 +97,30 @@ const ReactVirtualChatbotInner = <T,>(
     followOutput = true,
     initialScrollIndex,
     renderTypingIndicator,
-  }: ReactVirtualChatbotProps<T>,
-  ref: React.Ref<ReactVirtualChatbotHandle<T>>,
-) => {
-  // 1. Basic Refs & Engine Initialization
+    codeHighlighting = true,
+    worker,
+    fallbackFetcher,
+    apiKey,
+    selectedModelId,
+    onStateChange
+  } = props;
+
+  // 1. Store Initialization (The Heart of the Black Box)
+  const store = useMemo(() => new ChatStore({
+    worker,
+    fallbackFetcher,
+    initialState: {
+      apiKey,
+      selectedModelId,
+    }
+  }), []);
+
+  // Sync props to store
+  useEffect(() => { if (apiKey) store.setApiKey(apiKey); }, [apiKey, store]);
+  useEffect(() => { if (selectedModelId) store.setSelectedModel(selectedModelId); }, [selectedModelId, store]);
+
+  // 2. State & Engine Refs
+  const [history, setHistory] = useState<ChatMessage[]>(store.state.history);
   const containerRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const typingRef = useRef<HTMLDivElement>(null);
@@ -83,40 +133,70 @@ const ReactVirtualChatbotInner = <T,>(
   const viewHRef = useRef(600);
   const isAnchoringRef = useRef(false);
 
-  const itemsRef = useRef(items);
-  const lastPropsItemsRef = useRef(items);
+  const itemsRef = useRef(history);
 
   const engine = useMemo(
     () =>
       new VirtualChatbot({
-        totalCount: items.length,
+        totalCount: history.length,
         estimatedItemHeight: rowH,
         viewportHeight: viewHRef.current,
         buffer: bufferRow,
       }),
-    [rowH, bufferRow, items.length],
+    [rowH, bufferRow], // Note: we update totalCount via effect
   );
   const engineRef = useRef(engine);
   engineRef.current = engine;
 
-  if (lastPropsItemsRef.current !== items) {
-    itemsRef.current = items;
-    lastPropsItemsRef.current = items;
-    // If the prop actually changes, we should also update the engine
-    if (engineRef.current) {
-      engineRef.current.updateOptions({ totalCount: items.length });
-    }
-  }
+  // Subscribe to store changes
+  useEffect(() => {
+    // Sync initial state (including persisted values)
+    if (onStateChange) onStateChange({ ...store.state });
+
+    const unsub = store.subscribe(ChatEvent.HISTORY_CHANGED, () => {
+      const nextHistory = [...store.state.history];
+      setHistory(nextHistory);
+      itemsRef.current = nextHistory;
+      engine.updateOptions({ totalCount: nextHistory.length });
+      updateUI();
+      
+      // Auto-scroll to bottom on new messages if following output
+      if (followOutput && containerRef.current) {
+        const el = containerRef.current;
+        const targetST = Math.max(0, engine.getTotalHeight() - el.clientHeight);
+        // Use a small delay to ensure DOM has updated
+        requestAnimationFrame(() => {
+          el.scrollTop = targetST;
+          updateRange(targetST);
+        });
+      }
+      
+      if (onStateChange) onStateChange({ ...store.state });
+    });
+    
+    const unsubStream = store.subscribe(ChatEvent.STREAM_STATE_CHANGED, () => {
+      if (onStateChange) onStateChange({ ...store.state });
+    });
+
+    const unsubConfig = store.subscribe(ChatEvent.CONFIG_CHANGED, () => {
+      if (onStateChange) onStateChange({ ...store.state });
+    });
+
+    return () => {
+      unsub();
+      unsubStream();
+      unsubConfig();
+    };
+  }, [store, engine, onStateChange]);
 
   const poolSize = useMemo(
     () => engine.getPoolSize(POOL_OVERHEAD, MAX_POOL),
     [engine],
   );
 
-  // 2. Virtualization Data Refs
   const rangeRef = useRef<VirtualChatbotRange>({ start: 0, end: 0 });
   const slotMapRef = useRef<Int32Array>(new Int32Array(MAX_POOL));
-  const refsRef = useRef<(IVirtualChatRowHandle<T> | null)[]>(
+  const refsRef = useRef<(IVirtualChatRowHandle<ChatMessage> | null)[]>(
     new Array(MAX_POOL).fill(null),
   );
   const wrapperRefs = useRef<(HTMLDivElement | null)[]>(
@@ -129,7 +209,6 @@ const ReactVirtualChatbotInner = <T,>(
     new Float64Array(MAX_POOL).fill(-1),
   );
 
-  // 3. Core Utility Functions (Positioning & Sync)
   const anchorRef = useRef({ index: -1, offset: 0 });
 
   const recordAnchor = useCallback(() => {
@@ -172,13 +251,10 @@ const ReactVirtualChatbotInner = <T,>(
       if (h <= 0) return;
 
       const oldH = engine.getHeight(index);
-      const isLast = index === (itemsRef.current as any).length - 1;
-      const item = (itemsRef.current as any)?.[index];
+      const item = itemsRef.current[index];
       const isLoading = item?.metadata?.isLoading === true;
       
-      // For the last item (likely streaming), we only allow it to grow to avoid jitter WHILE loading.
-      // Once loading is done, or if it's not the last item, we follow the real height.
-      const finalH = (isLast && isLoading) ? Math.max(oldH, h) : h;
+      const finalH = isLoading ? Math.max(oldH, h) : h;
       
       if (Math.abs(finalH - oldH) < 0.5) return;
 
@@ -249,15 +325,14 @@ const ReactVirtualChatbotInner = <T,>(
     [engine, poolSize, syncHeight, recordAnchor, applyAnchor],
   );
 
-  // 4. High-Performance Streaming Engine
+  // Streaming logic
   const updateBufferRef = useRef<Map<number, string>>(new Map());
   const rafTickRef = useRef<TickFn | null>(null);
   const animationActionRef = useRef<(ctx: TickContext) => void>(() => {});
 
-  const processStreamingUpdates = useCallback(() => {
+  animationActionRef.current = () => {
     const buffer = updateBufferRef.current;
     if (buffer.size === 0) return;
-
     buffer.forEach((content, idx) => {
       for (let s = 0; s < poolSize; s++) {
         if (lastIndicesRef.current[s] === idx) {
@@ -271,39 +346,33 @@ const ReactVirtualChatbotInner = <T,>(
       }
     });
     buffer.clear();
-  }, [poolSize, syncHeight, followOutput]);
+  };
 
-  animationActionRef.current = processStreamingUpdates;
-
-  const updateMessageTextThrottled = useCallback(
-    (index: number, text: string) => {
-      // Cast to any first to handle generic T, then use internal structure
-      const its = itemsRef.current as any;
-      if (its && its[index]) {
-        const item = its[index] as ChatMessage;
-        if (typeof item.content === "string") item.content = text;
-        else if (item.parts?.[0]?.type === "text") item.parts[0].content = text;
-        else if (!item.parts) item.content = text;
-      }
-      updateBufferRef.current.set(index, text);
-      if (!rafTickRef.current) {
-        const raf = RAFEngine.getInstance();
-        rafTickRef.current = raf.addTick({
-          intervalTime: 0,
-          lastFlush: performance.now(),
-          actionRef: animationActionRef,
-        });
-      }
-    },
-    [],
-  );
-
-  // 5. Lifecycle Effects
   useEffect(() => {
-    engine.updateOptions({ totalCount: items.length });
-    updateUI();
-  }, [items.length, updateUI, engine]);
+    const unsub = store.subscribe(ChatEvent.MESSAGE_UPDATED, (id, payload) => {
+      if (typeof id === 'number') {
+        const item = store.state.history[id];
+        if (item) {
+          const fullContent = (item.parts && item.parts[0]) 
+            ? item.parts[0].content 
+            : (item.content || "");
+          
+          updateBufferRef.current.set(id, fullContent);
+          
+          if (!rafTickRef.current) {
+            rafTickRef.current = RAFEngine.getInstance().addTick({
+              intervalTime: 0,
+              lastFlush: performance.now(),
+              actionRef: animationActionRef,
+            });
+          }
+        }
+      }
+    });
+    return unsub;
+  }, [store, poolSize, syncHeight]);
 
+  // Viewport & Scroll
   useLayoutEffect(() => {
     if (!containerRef.current) return;
     const obs = new ResizeObserver((entries) => {
@@ -313,8 +382,7 @@ const ReactVirtualChatbotInner = <T,>(
         engine.updateOptions({ viewportHeight: h });
         const el = containerRef.current;
         if (followOutput && isAtBottomRef.current && el) {
-          const targetST = Math.max(0, engine.getTotalHeight() - h);
-          el.scrollTop = targetST;
+          el.scrollTop = Math.max(0, engine.getTotalHeight() - h);
         }
         updateUI();
       }
@@ -322,65 +390,6 @@ const ReactVirtualChatbotInner = <T,>(
     obs.observe(containerRef.current);
     return () => obs.disconnect();
   }, [engine, updateUI, followOutput]);
-
-  const nodePool = useMemo(() => {
-    const pool = poolSize;
-    const nodes = [];
-    for (let s = 0; s < pool; s++) {
-      nodes.push(
-        <div
-          key={s}
-          ref={(r) => {
-            wrapperRefs.current[s] = r;
-          }}
-          style={{
-            position: "absolute",
-            top: 0,
-            left: 0,
-            width: "100%",
-            transform: `translateY(-9999px)`,
-            visibility: "hidden",
-          }}
-        >
-          <EngineSlot
-            ref={(r) => {
-              refsRef.current[s] = r;
-            }}
-            initialIndex={-1}
-            initialData={null}
-            renderItem={renderItem as any}
-          />
-        </div>,
-      );
-    }
-    return nodes;
-  }, [poolSize, renderItem]);
-
-  useLayoutEffect(() => {
-    const el = containerRef.current;
-    const st = el ? el.scrollTop : 0;
-    lastVisRef.current.fill(0);
-    updateUI(engine.computeRange(st));
-  }, [engine, nodePool, updateUI]);
-
-  useLayoutEffect(() => {
-    const observer = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        const target = entry.target as HTMLElement;
-        for (let s = 0; s < poolSize; s++) {
-          if (wrapperRefs.current[s] === target) {
-            const index = lastIndicesRef.current[s];
-            if (index !== -1) syncHeight(index, s);
-            break;
-          }
-        }
-      }
-    });
-    wrapperRefs.current.forEach((w) => {
-      if (w) observer.observe(w);
-    });
-    return () => observer.disconnect();
-  }, [poolSize, nodePool, syncHeight]);
 
   const updateRange = useCallback(
     (scrollTop: number) => {
@@ -404,33 +413,16 @@ const ReactVirtualChatbotInner = <T,>(
     const onRafUpdate = () => {
       if (isAnchoringRef.current) return;
       const st = el.scrollTop;
-      const sh = el.scrollHeight;
       const ch = el.clientHeight;
       const actualHeight = engine.getTotalHeight();
       const distanceToBottom = Math.max(0, actualHeight - ch - st);
-
-      if (bufferHeightRef.current > 0) {
-        const elasticBuffer = Math.max(0, viewHRef.current - distanceToBottom);
-        if (elasticBuffer !== bufferHeightRef.current) {
-          bufferHeightRef.current = elasticBuffer;
-          targetHeightRef.current = actualHeight + elasticBuffer;
-          if (contentRef.current)
-            contentRef.current.style.height = `${targetHeightRef.current}px`;
-        }
-      }
-      isAtBottomRef.current = Math.abs(sh - st - ch) < 5;
+      isAtBottomRef.current = Math.abs(actualHeight - st - ch) < 5;
       updateRange(st);
       if (performance.now() - prevScrollTime.current < SCROLL_STOP_DELAY) {
         rafId.current = requestAnimationFrame(onRafUpdate);
       } else {
         rafId.current = null;
         engine.resetVelocity();
-        const finalRange = engine.computeRange(st);
-        if (finalRange.changed) {
-          rangeRef.current.start = finalRange.start;
-          rangeRef.current.end = finalRange.end;
-          updateUI(rangeRef.current);
-        }
       }
     };
     const handleScroll = () => {
@@ -439,62 +431,33 @@ const ReactVirtualChatbotInner = <T,>(
         rafId.current = requestAnimationFrame(onRafUpdate);
     };
     el.addEventListener("scroll", handleScroll, { passive: true });
-    return () => {
-      el.removeEventListener("scroll", handleScroll);
-      if (rafId.current !== null) cancelAnimationFrame(rafId.current);
-    };
-  }, [engine, updateRange, updateUI]);
+    return () => el.removeEventListener("scroll", handleScroll);
+  }, [engine, updateRange]);
 
   useLayoutEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-    if (initialScrollDoneRef.current) {
-      if (followOutput && isAtBottomRef.current) {
-        const targetST = Math.max(0, engine.getTotalHeight() - el.clientHeight);
-        el.scrollTop = targetST;
-        updateRange(targetST);
-      } else {
-        updateRange(el.scrollTop);
-      }
-      return;
+    if (initialScrollIndex !== undefined) {
+      const offset = engine.getOffset(initialScrollIndex);
+      if (containerRef.current) containerRef.current.scrollTop = offset;
+      updateRange(offset);
+    } else if (followOutput) {
+      const el = containerRef.current;
+      if (el) el.scrollTop = el.scrollHeight;
     }
-    const isRestored = el.scrollTop > 0;
-    if ((initialScrollIndex !== undefined || followOutput) && !isRestored) {
-      const performInitialScroll = () => {
-        if (!containerRef.current) return;
-        const totalH = engine.getTotalHeight();
-        if (totalH <= 0) return;
-        const ch = containerRef.current.clientHeight;
-        let targetST = 0;
-        if (
-          initialScrollIndex !== undefined &&
-          initialScrollIndex >= 0 &&
-          initialScrollIndex < (itemsRef.current as any).length
-        ) {
-          targetST = engine.getOffset(initialScrollIndex);
-        } else if (followOutput) {
-          targetST = Math.max(0, totalH - ch);
-          isAtBottomRef.current = true;
-        }
-        containerRef.current.scrollTop = targetST;
-        updateRange(targetST);
-        initialScrollDoneRef.current = true;
-      };
-      requestAnimationFrame(() => {
-        requestAnimationFrame(performInitialScroll);
-      });
-      setTimeout(performInitialScroll, 300);
-    } else {
-      updateRange(el.scrollTop);
-      initialScrollDoneRef.current = true;
-    }
-  }, [engine, updateRange, followOutput, initialScrollIndex]);
+  }, []);
 
-  // 6. Imperative Handle
+  // ─────────────────────────────────────────────
+  // Imperative Handle
+  // ─────────────────────────────────────────────
   useImperativeHandle(ref, () => ({
-    get element() {
-      return containerRef.current;
-    },
+    get element() { return containerRef.current; },
+    get store() { return store; },
+    get state() { return store.state; },
+    
+    sendMessage: (text: string) => store.sendMessage(text),
+    stopStreaming: () => store.workerModule.stopStream(),
+    setApiKey: (key: string) => store.setApiKey(key),
+    setSelectedModel: (id: string) => store.setSelectedModel(id),
+    
     scrollToBottom: () => {
       const el = containerRef.current;
       if (el) {
@@ -503,218 +466,117 @@ const ReactVirtualChatbotInner = <T,>(
         updateRange(targetST);
       }
     },
-    patchMetadata: (index: number, patch: any) => {
-      const its = itemsRef.current as any;
-      if (its && its[index]) {
-        const item = its[index];
-        const updatedMetadata = { ...(item.metadata || {}), ...patch };
-        const updatedItem = { ...item, metadata: updatedMetadata };
-        (ref as any).current.updateItem(index, updatedItem);
-      }
+    focusLastItem: () => store.layoutModule.calculateAndApplyMinHeight(store.historyModule.getCount() - 1),
+    
+    // Legacy methods for backward compatibility
+    appendItems: (newItems) => store.historyModule.appendMessages(newItems as any),
+    patchMetadata: (index, patch) => store.historyModule.updateMessageMetadata(index, patch),
+    updateMessageText: (index, text) => store.emit(ChatEvent.MESSAGE_UPDATED, index, text),
+    updateItem: (index, newItem) => {
+        const next = [...store.state.history];
+        next[index] = newItem as any;
+        store.historyModule.setHistory(next);
     },
-    appendItems: (newItems: T[], forceScroll?: boolean) => {
-      const prevItems = Array.isArray(itemsRef.current)
-        ? itemsRef.current
-        : Array.from(itemsRef.current);
-      const nextItems = [...prevItems, ...newItems] as T[];
-      itemsRef.current = nextItems;
-      engine.updateOptions({ totalCount: nextItems.length });
-      const el = containerRef.current;
-      const content = contentRef.current;
-      if (el && content) {
-        const totalSize = engine.getTotalHeight() + bufferHeightRef.current;
-        content.style.height = `${totalSize}px`;
-        let targetST = el.scrollTop;
-        if (forceScroll || (isAtBottomRef.current && followOutput)) {
-          targetST = Math.max(0, engine.getTotalHeight() - el.clientHeight);
-          el.scrollTop = targetST;
-          if (forceScroll) isAtBottomRef.current = true;
-        }
-        const velocity = engine.getVelocity();
-        const next = engine.computeRange(
-          targetST,
-          engine.getDynamicBuffer(velocity),
-        );
-        rangeRef.current.start = next.start;
-        rangeRef.current.end = next.end;
-        updateUI(rangeRef.current);
-      }
-    },
-    setTyping: (isVisible: boolean, autoScroll = true) => {
-      const el = typingRef.current;
-      const container = containerRef.current;
-      const content = contentRef.current;
-      if (el) {
-        el.style.display = isVisible ? "flex" : "none";
-        if (isVisible) {
-          bufferHeightRef.current = 800;
-          targetHeightRef.current = engine.getTotalHeight() + 800;
-          if (content) content.style.height = `${targetHeightRef.current}px`;
-          const top = engine.getTotalHeight();
-          el.style.transform = `translateY(${top}px)`;
-          if (autoScroll && container)
-            container.scrollTop = container.scrollHeight;
-        } else {
-          bufferHeightRef.current = 0;
-          targetHeightRef.current = 0;
-          if (content) content.style.height = `${engine.getTotalHeight()}px`;
-        }
-      }
-    },
-    updateMessageText: (index: number, text: string) => {
-      updateMessageTextThrottled(index, text);
-    },
-    updateItem: (index: number, newItem: T) => {
-      const its = itemsRef.current as any;
-      if (Array.isArray(its)) its[index] = newItem;
-      else its[index] = newItem;
-
-      for (let s = 0; s < poolSize; s++) {
-        if (lastIndicesRef.current[s] === index) {
-          const slot = refsRef.current[s];
-          if (slot) {
-            const wrapper = wrapperRefs.current[s];
-            slot.update(newItem, index, wrapper, true);
-            syncHeight(index, s);
-          }
-          break;
-        }
-      }
-    },
-    getTotalCount: () => {
-      return (itemsRef.current as any).length || 0;
-    },
+    getTotalCount: () => store.historyModule.getCount(),
     scrollToIndex: (index: number) => {
-      const el = containerRef.current;
-      if (el && index >= 0 && index < (itemsRef.current as any).length) {
         const offset = engine.getOffset(index);
-        el.scrollTop = offset;
+        if (containerRef.current) containerRef.current.scrollTop = offset;
         updateRange(offset);
-      }
     },
     updateItemHeight: (index: number, height: number) => {
-      const changed = engine.setHeight(index, height);
-      if (changed && contentRef.current) {
-        contentRef.current.style.height = `${engine.getTotalHeight()}px`;
+        engine.setHeight(index, height);
         updateUI();
-      }
     },
-    setBottomBuffer: (height: number) => {
-      const actualHeight = engine.getTotalHeight();
-      bufferHeightRef.current = height;
-      targetHeightRef.current = actualHeight + height;
-      if (contentRef.current)
-        contentRef.current.style.height = `${targetHeightRef.current}px`;
+    setBottomBuffer: (h) => {
+        bufferHeightRef.current = h;
+        if (contentRef.current) contentRef.current.style.height = `${engine.getTotalHeight() + h}px`;
     },
-    focusLastItem: () => {
-      const container = containerRef.current;
-      const its = itemsRef.current as any;
-      const count = its.length;
-      if (!container || count < 2) return;
-
-      const viewportHeight = container.clientHeight;
-      const aiIdx = count - 1;
-      const userIdx = count - 2;
-
-      // 1. Clear minHeight from ALL items first to ensure only the last one is focused
-      for (let i = 0; i < count; i++) {
-        if (its[i].metadata?.minHeight) {
-          its[i].metadata = { ...its[i].metadata, minHeight: undefined };
-          // If in pool, update it
-          for (let s = 0; s < poolSize; s++) {
-            if (lastIndicesRef.current[s] === i) {
-              const slot = refsRef.current[s];
-              if (slot) slot.update(its[i], i, wrapperRefs.current[s], true);
-              break;
-            }
-          }
-        }
-      }
-      
-      // 2. Calculate and set new minHeight for the last item
-      const userHeight = engine.getHeight(userIdx);
-      const targetMinHeight = Math.max(0, viewportHeight - userHeight);
-      
-      if (its[aiIdx]) {
-        its[aiIdx].metadata = { ...its[aiIdx].metadata, minHeight: `${targetMinHeight}px` };
-        engine.setHeight(aiIdx, Math.max(engine.getHeight(aiIdx), targetMinHeight));
-        
-        if (contentRef.current) {
-          contentRef.current.style.height = `${engine.getTotalHeight()}px`;
-        }
-        
-        for (let s = 0; s < poolSize; s++) {
-          if (lastIndicesRef.current[s] === aiIdx) {
-            const slot = refsRef.current[s];
-            if (slot) slot.update(its[aiIdx], aiIdx, wrapperRefs.current[s], true);
-            break;
-          }
-        }
-        
-        updateUI();
-        const offset = engine.getOffset(userIdx);
-        container.scrollTop = offset;
-      }
-    },
+    setTyping: (isVisible: boolean) => {
+        if (typingRef.current) typingRef.current.style.display = isVisible ? "flex" : "none";
+    }
   }));
 
-  return (
-    <div
-      ref={containerRef}
-      className={className}
-      style={{
-        height: "100%",
-        width,
-        overflowY: "scroll",
-        position: "relative",
-        scrollbarGutter: "stable",
-      }}
-    >
-      <div
-        ref={contentRef}
-        style={{
-          height: engine.getTotalHeight() + bufferHeightRef.current,
-          width: "100%",
-          position: "relative",
-        }}
-      >
-        {nodePool}
+  const nodePool = useMemo(() => {
+    const pool = poolSize;
+    const nodes = [];
+    for (let s = 0; s < pool; s++) {
+      nodes.push(
         <div
-          ref={typingRef}
-          className="typing-indicator-container"
+          key={s}
+          ref={(r) => { wrapperRefs.current[s] = r; }}
           style={{
-            display: "none",
             position: "absolute",
             top: 0,
             left: 0,
-            zIndex: 10,
-            pointerEvents: "none",
+            width: "100%",
+            transform: `translateY(-9999px)`,
+            visibility: "hidden",
           }}
         >
-          <div className="typing-indicator-content">
-            {renderTypingIndicator ? (
-              renderTypingIndicator()
-            ) : (
-              <div className="ai-message-prefix">
-                <GeminiSparkle isLoading={true} />
-                <div className="gemini-typing-dots">
-                  <span></span>
-                  <span></span>
-                  <span></span>
+          <EngineSlot
+            ref={(r) => { refsRef.current[s] = r; }}
+            initialIndex={-1}
+            initialData={null}
+            renderItem={(renderItem || ((item: any, index: number) => DefaultChatRenderer(item, index, codeHighlighting))) as any}
+          />
+        </div>,
+      );
+    }
+    return nodes;
+  }, [poolSize, renderItem, codeHighlighting]);
+
+  return (
+    <ChatProvider store={store}>
+      <div
+        ref={containerRef}
+        className={className}
+        style={{
+          height: "100%",
+          width,
+          overflowY: "scroll",
+          position: "relative",
+          scrollbarGutter: "stable",
+        }}
+      >
+        <div
+          ref={contentRef}
+          style={{
+            height: engine.getTotalHeight() + bufferHeightRef.current,
+            width: "100%",
+            position: "relative",
+          }}
+        >
+          {nodePool}
+          <div
+            ref={typingRef}
+            className="typing-indicator-container"
+            style={{
+              display: "none",
+              position: "absolute",
+              top: 0,
+              left: 0,
+              zIndex: 10,
+              pointerEvents: "none",
+            }}
+          >
+            <div className="typing-indicator-content">
+              {renderTypingIndicator ? (
+                renderTypingIndicator()
+              ) : (
+                <div className="ai-message-prefix">
+                  <GeminiSparkle isLoading={true} />
+                  <div className="gemini-typing-dots">
+                    <span></span><span></span><span></span>
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </div>
       </div>
-    </div>
+    </ChatProvider>
   );
 };
 
-export const ReactVirtualChatbot = forwardRef(ReactVirtualChatbotInner) as (<T>(
-  props: ReactVirtualChatbotProps<T> & {
-    ref?: React.Ref<ReactVirtualChatbotHandle<T>>;
-  },
-) => React.ReactElement) & { displayName?: string };
-
+export const ReactVirtualChatbot = forwardRef(ReactVirtualChatbotInner) as any;
 ReactVirtualChatbot.displayName = "ReactVirtualChatbot";

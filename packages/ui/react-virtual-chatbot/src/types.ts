@@ -113,4 +113,12 @@ export interface ReactVirtualChatbotHandle<T = any> {
    * Get the true total number of chat items managed internally.
    */
   getTotalCount: () => number;
+
+  // New Store-based methods
+  sendMessage: (text: string) => void;
+  stopStreaming: () => void;
+  setApiKey: (key: string) => void;
+  setSelectedModel: (id: string) => void;
+  readonly state: any;
+  readonly store: any;
 }

@@ -7,3 +7,8 @@ export { ChatInput, type ChatInputHandle } from "./components/ChatInput";
 export { GeminiSparkle, type GeminiSparkleProps } from "./components/GeminiSparkle";
 export { UniversalChatRow } from "./components/UniversalChatRow";
 export { ReactVirtualChatbot } from "./ReactVirtualChatbot";
+export * from "./store";
+export * from "./store/ChatContext";
+export * from "./store/types";
+export * from "./worker/types";
+export { initChatWorker } from "./worker/ChatWorkerBase";

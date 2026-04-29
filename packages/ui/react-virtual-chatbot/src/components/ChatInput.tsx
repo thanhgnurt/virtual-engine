@@ -17,6 +17,7 @@ export interface ChatInputProps {
   selectedModelId?: string;
   placeholder?: string;
   className?: string;
+  isStreaming?: boolean;
 }
 
 export interface ChatInputHandle {
@@ -35,7 +36,8 @@ export const ChatInput = React.memo(
       onModelSelect,
       selectedModelId,
       placeholder = "Ask Gemini", 
-      className = "" 
+      className = "",
+      isStreaming: isStreamingProp
     }, ref) => {
       const textareaRef = useRef<HTMLTextAreaElement>(null);
       const containerRef = useRef<HTMLDivElement>(null);
@@ -43,6 +45,14 @@ export const ChatInput = React.memo(
       const [isAttachMenuOpen, setIsAttachMenuOpen] = useState(false);
       const [isModelMenuOpen, setIsModelMenuOpen] = useState(false);
       const [isStreaming, setIsStreaming] = useState(false);
+
+      useEffect(() => {
+        if (isStreamingProp !== undefined) {
+          setIsStreaming(isStreamingProp);
+          const textarea = textareaRef.current;
+          if (textarea) textarea.disabled = isStreamingProp;
+        }
+      }, [isStreamingProp]);
       const [isExpanded, setIsExpanded] = useState(false);
 
       useImperativeHandle(ref, () => ({

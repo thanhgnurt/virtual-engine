@@ -1,4 +1,5 @@
-import { forwardRef, memo, useImperativeHandle, useRef, useLayoutEffect, useState, useCallback } from "react";
+import { forwardRef, memo, useImperativeHandle, useRef, useLayoutEffect, useState, useCallback, useEffect } from "react";
+import { useChatStore } from "../store/ChatContext";
 import {
   ChatMessage,
   ISubContentHandle,
@@ -57,6 +58,10 @@ const UniversalPartSlot = memo(forwardRef<ISubContentHandle, { className?: strin
       if (containerRef.current) {
         containerRef.current.style.display = visible ? "block" : "none";
       }
+    },
+    getTextElement: () => {
+      // Return the DOM element of the VirtualChatText
+      return (textRef.current as any)?.container;
     }
   }));
 
@@ -107,7 +112,13 @@ export const UniversalChatRow = memo(
         // Update Classes
         containerRef.current.className = `message-row-container ${className || ""} ${role} ${isLoading ? 'is-loading' : ''}`;
         
-        if (sparkRef.current) sparkRef.current.style.display = role === "assistant" ? "flex" : "none";
+        if (sparkRef.current) {
+          sparkRef.current.style.display = role === "assistant" ? "flex" : "none";
+          // We need to update the GeminiSparkle inside sparkRef if it's loading
+          // Since GeminiSparkle is a React component, we might need to expose a handle or 
+          // just let React handle it if it re-renders. 
+          // But here we are in doUpdate (imperative).
+        }
         if (editRef.current) editRef.current.style.display = role === "user" ? "flex" : "none";
         const content = item.content || "";
 
@@ -117,6 +128,7 @@ export const UniversalChatRow = memo(
         
         // --- 1. Content Parsing ---
         const finalParts: any[] = [];
+        // ... (keep parsing logic)
         if (item.parts && item.parts.length > 0) {
           finalParts.push(...item.parts);
         } else if (content.includes("```")) {
@@ -201,9 +213,32 @@ export const UniversalChatRow = memo(
         bubble: bubbleRef.current
       }));
 
+      const store = useChatStore();
+
       useLayoutEffect(() => {
-        if (currentItemRef.current) doUpdate(currentItemRef.current);
+        if (currentItemRef.current) {
+          doUpdate(currentItemRef.current);
+          
+          // Register first text slot for direct DOM sync
+          const index = (currentItemRef.current as any).index;
+          if (typeof index === 'number') {
+            const firstSlot = partRefs.current[0];
+            const el = (firstSlot as any)?.getTextElement?.();
+            if (el) {
+              store.registryModule.register(index, el);
+            }
+          }
+        }
       }, [slotCount]);
+
+      useEffect(() => {
+        return () => {
+          const index = (currentItemRef.current as any)?.index;
+          if (typeof index === 'number') {
+            store.registryModule.unregister(index);
+          }
+        };
+      }, []);
 
       return (
         <div ref={containerRef} className={`message-row-container ${className || ""}`}>
