@@ -367,12 +367,12 @@
 
   .code-header {
     background-color: var(--color-slate-900);
-    padding: 0.5rem 1rem;
+    padding: 0 1rem;
     font-size: 0.75rem;
     font-family:
       ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
     color: var(--color-slate-400);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    border-bottom: 2px solid white;
   }
 }
 
