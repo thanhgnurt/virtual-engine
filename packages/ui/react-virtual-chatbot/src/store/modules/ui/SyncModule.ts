@@ -1,7 +1,7 @@
-import { BaseModule } from '../../core/BaseModule';
-import { ChatEvent } from '../../types';
-import { setTextNode } from '../../../utils/dom';
-import { ChatStore } from '../../index';
+import { setTextNode } from "../../../utils/dom";
+import { BaseModule } from "../../core/BaseModule";
+import { ChatStore } from "../../index";
+import { ChatEvent } from "../../types";
 
 /**
  * Orchestrates direct DOM updates for streaming text.
@@ -10,24 +10,80 @@ import { ChatStore } from '../../index';
 export class SyncModule extends BaseModule<ChatStore, ChatEvent> {
   public interests: ChatEvent[] = [ChatEvent.MESSAGE_UPDATED];
 
-  /**
-   * React to message updates by finding the DOM element and updating its text.
-   */
-  public override onNotify(event: ChatEvent, id?: string | number, payload?: any): void {
-    if (event === ChatEvent.MESSAGE_UPDATED && typeof id === 'number') {
-      const node = this.store.contentRegistryModule.get(id, 0);
-      if (node) {
-        // Get the accumulated content from history
-        const item = this.store.state.history[id];
-        if (item) {
-            const fullContent = (item.parts && item.parts[0]) 
-                ? item.parts[0].content 
-                : (item.content || "");
-            
-            // Direct DOM update - No React Render!
-            setTextNode(node as any, fullContent);
-        }
+  private updateBuffer = new Map<number, string>();
+  private rafId: number | null = null;
+
+  public override onNotify(
+    event: ChatEvent,
+    id?: string | number,
+    payload?: any,
+  ): void {
+    if (event === ChatEvent.MESSAGE_UPDATED && typeof id === "number") {
+      const item = this.store.state.history[id];
+      if (item) {
+        const fullContent =
+          item.parts && item.parts[0]
+            ? item.parts[0].content
+            : item.content || "";
+
+        this.updateBuffer.set(id, fullContent);
+        this.requestTick();
       }
     }
+  }
+
+  private requestTick() {
+    if (this.rafId !== null) return;
+    this.rafId = requestAnimationFrame(this.tick);
+  }
+
+  private tick = () => {
+    this.rafId = null;
+    if (this.updateBuffer.size === 0) return;
+
+    const remaining = new Map<number, string>();
+
+    this.updateBuffer.forEach((content, index) => {
+      const isComplex =
+        content.includes("```") ||
+        content.includes("![") ||
+        content.includes("\n");
+
+      if (isComplex) {
+        const handle = this.store.rowRegistryModule.getHandle(index);
+        if (handle) {
+          handle.updateText(content);
+        } else {
+          remaining.set(index, content); // Retry next tick
+        }
+      } else {
+        const node = this.store.contentRegistryModule.get(index, 0);
+        if (node) {
+          setTextNode(node as any, content);
+          const parent = (node as any).parentElement;
+          if (parent && parent.style.display === "none") {
+            parent.style.display = "block";
+          }
+        } else {
+          remaining.set(index, content); // Retry next tick
+        }
+      }
+
+      if (this.store.layoutModule) {
+        this.store.layoutModule.syncHeight(index);
+      }
+    });
+
+    this.updateBuffer = remaining;
+    if (this.updateBuffer.size > 0) {
+      this.requestTick();
+    }
+  };
+
+  public override onDestroy(): void {
+    if (this.rafId !== null) {
+      cancelAnimationFrame(this.rafId);
+    }
+    this.updateBuffer.clear();
   }
 }
