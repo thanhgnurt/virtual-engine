@@ -97,6 +97,7 @@ export interface EnhancedChatbotProps extends Partial<
   apiKey?: string;
   selectedModelId?: string;
   onStateChange?: (state: any) => void;
+  history?: ChatMessage[];
 }
 
 const ReactVirtualChatbotInner = (
@@ -118,6 +119,7 @@ const ReactVirtualChatbotInner = (
     apiKey,
     selectedModelId,
     onStateChange,
+    history: initialHistory,
   } = props;
 
   // 1. Store Initialization (The Heart of the Black Box)
@@ -129,6 +131,7 @@ const ReactVirtualChatbotInner = (
         initialState: {
           apiKey,
           selectedModelId,
+          history: initialHistory || [],
         },
       }),
     [],
@@ -312,13 +315,13 @@ const ReactVirtualChatbotInner = (
         }
         const content = contentRef.current;
         if (content) {
-          content.style.height = `${engine.getTotalHeight()}px`;
+          content.style.height = `${currentEngine.getTotalHeight()}px`;
         }
         for (let s = 0; s < poolSize; s++) {
           const si = lastIndicesRef.current[s];
           if (si > index) {
             const w = wrapperRefs.current[s];
-            const newOffset = engine.getOffset(si);
+            const newOffset = currentEngine.getOffset(si);
             if (w && lastOffsetsRef.current[s] !== newOffset) {
               w.style.transform = `translateY(${newOffset}px)`;
               lastOffsetsRef.current[s] = newOffset;
@@ -442,6 +445,7 @@ const ReactVirtualChatbotInner = (
 
   const updateRange = useCallback(
     (scrollTop: number) => {
+      if (!engine) return;
       const velocity = engine.updateVelocity(scrollTop, performance.now());
       const next = engine.computeRange(
         scrollTop,
@@ -475,7 +479,7 @@ const ReactVirtualChatbotInner = (
         rafId.current = requestAnimationFrame(onRafUpdate);
       } else {
         rafId.current = null;
-        engine.resetVelocity();
+        if (engine) engine.resetVelocity();
       }
     };
     const handleScroll = () => {
@@ -550,12 +554,12 @@ const ReactVirtualChatbotInner = (
       store.virtualModule.handleScroll(offset);
     },
     updateItemHeight: (index: number, height: number) => {
-      engine.setHeight(index, height);
+      if (engine) engine.setHeight(index, height);
       updateUI();
     },
     setBottomBuffer: (h) => {
       bufferHeightRef.current = h;
-      if (contentRef.current)
+      if (contentRef.current && engine)
         contentRef.current.style.height = `${engine.getTotalHeight() + h}px`;
     },
     setTyping: (isVisible: boolean) => {
@@ -589,7 +593,7 @@ const ReactVirtualChatbotInner = (
             }}
             initialIndex={-1}
             initialData={null}
-            renderItem={(item: ChatMessage | null, index: number) => {
+            renderItem={(item: any, index: number) => {
               if (renderItem) return renderItem(item, index);
               return DefaultChatRenderer(item, index, codeHighlighting);
             }}
