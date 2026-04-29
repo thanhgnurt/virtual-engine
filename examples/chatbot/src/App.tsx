@@ -14,6 +14,7 @@ interface ModelInfo {
   name: string;
   desc: string;
   icon: string;
+  isFree?: boolean;
 }
 
 const Sidebar = () => (
@@ -55,6 +56,9 @@ function App() {
       });
 
       if (!response.ok) {
+        if (response.status === 429) {
+          throw new Error("MODEL_OUT_OF_QUOTA: This model is currently at its rate limit. Please select another model.");
+        }
         const err = await response.json().catch(() => ({}));
         throw new Error(err.error?.message || `HTTP ${response.status}`);
       }
@@ -96,12 +100,22 @@ function App() {
       .then(r => r.json())
       .then(data => {
         if (data.data) {
-          const models: ModelInfo[] = data.data.map((m: any) => ({
-            id: m.id,
-            name: m.name || m.id,
-            desc: m.description || "OpenRouter Model",
-            icon: m.id.includes("gpt") ? "🤖" : m.id.includes("claude") ? "🧠" : m.id.includes("gemini") ? "✨" : "🌟"
-          }));
+          const models: ModelInfo[] = data.data
+            .map((m: any) => {
+              const isFree = m.pricing?.prompt === "0" && m.pricing?.completion === "0";
+              return {
+                id: m.id,
+                name: (isFree ? "✨ " : "") + (m.name || m.id),
+                desc: m.description || "OpenRouter Model",
+                icon: m.id.includes("gpt") ? "🤖" : m.id.includes("claude") ? "🧠" : m.id.includes("gemini") ? "✨" : "🌟",
+                isFree: isFree
+              };
+            })
+            .sort((a: ModelInfo, b: ModelInfo) => {
+              if (a.isFree && !b.isFree) return -1;
+              if (!a.isFree && b.isFree) return 1;
+              return 0;
+            });
           setAvailableModels(models);
           if (models.length > 0 && chatbotRef.current) {
             const models = data.data; // Use raw data if needed or already mapped
