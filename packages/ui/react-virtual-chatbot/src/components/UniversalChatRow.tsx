@@ -101,6 +101,15 @@ export const UniversalChatRow = memo(
 
       const doUpdate = (item: ChatMessage | null) => {
         if (!item || !containerRef.current) return;
+        
+        // --- 0. Cleanup Old Registry ---
+        const oldIndex = (currentItemRef.current as any)?.index;
+        if (typeof oldIndex === "number" && oldIndex >= 0) {
+          store.rowRegistryModule.unregister(oldIndex);
+          partRefs.current.forEach((_, i) => store.contentRegistryModule.unregister(oldIndex, i));
+          store.componentRegistryModule.unregister(oldIndex, "dots");
+        }
+
         currentItemRef.current = item;
         
         const role = item.role || "user";
@@ -190,6 +199,28 @@ export const UniversalChatRow = memo(
         });
 
         requestAnimationFrame(checkHeight);
+
+        // --- 4. Registry Update ---
+        const index = (item as any).index;
+        if (typeof index === "number" && index >= 0) {
+          // Level 1: Register Row Container
+          if (containerRef.current) {
+            store.rowRegistryModule.register(index, containerRef.current);
+          }
+
+          // Level 2: Register Content Slots (TextNodes)
+          partRefs.current.forEach((slot, i) => {
+            const el = (slot as any)?.getTextElement?.();
+            if (el) {
+              store.contentRegistryModule.register(index, i, el);
+            }
+          });
+
+          // Level 3: Register UI Components
+          if (dotsRef.current) {
+            store.componentRegistryModule.register(index, "dots", dotsRef.current);
+          }
+        }
       };
 
       useImperativeHandle(ref, () => ({
@@ -218,27 +249,6 @@ export const UniversalChatRow = memo(
       useLayoutEffect(() => {
         if (currentItemRef.current) {
           doUpdate(currentItemRef.current);
-          
-          const index = (currentItemRef.current as any).index;
-          if (typeof index === 'number') {
-            // Level 1: Register Row Container
-            if (containerRef.current) {
-              store.rowRegistryModule.register(index, containerRef.current);
-            }
-
-            // Level 2: Register Content Slots (TextNodes)
-            partRefs.current.forEach((slot, i) => {
-              const el = (slot as any)?.getTextElement?.();
-              if (el) {
-                store.contentRegistryModule.register(index, i, el);
-              }
-            });
-
-            // Level 3: Register UI Components
-            if (dotsRef.current) {
-              store.componentRegistryModule.register(index, 'dots', dotsRef.current);
-            }
-          }
         }
       }, [slotCount]);
 
