@@ -123,10 +123,6 @@ export const UniversalChatRow = memo(
         
         if (sparkRef.current) {
           sparkRef.current.style.display = role === "assistant" ? "flex" : "none";
-          // We need to update the GeminiSparkle inside sparkRef if it's loading
-          // Since GeminiSparkle is a React component, we might need to expose a handle or 
-          // just let React handle it if it re-renders. 
-          // But here we are in doUpdate (imperative).
         }
         if (editRef.current) editRef.current.style.display = role === "user" ? "flex" : "none";
         const content = item.content || "";
@@ -137,7 +133,6 @@ export const UniversalChatRow = memo(
         
         // --- 1. Content Parsing ---
         const finalParts: any[] = [];
-        // ... (keep parsing logic)
         if (item.parts && item.parts.length > 0) {
           finalParts.push(...item.parts);
         } else if (content.includes("```")) {
@@ -185,7 +180,6 @@ export const UniversalChatRow = memo(
         }
 
         // --- 3. Rendering ---
-        // Hide all slots first
         for (let i = 0; i < slotCount; i++) {
           partRefs.current[i]?.setVisible(false);
         }
@@ -205,7 +199,7 @@ export const UniversalChatRow = memo(
         if (typeof index === "number" && index >= 0) {
           // Level 1: Register Row Container
           if (containerRef.current) {
-            store.rowRegistryModule.register(index, containerRef.current);
+            store.rowRegistryModule.register(index, containerRef.current, ref as any);
           }
 
           // Level 2: Register Content Slots (TextNodes)
@@ -227,7 +221,6 @@ export const UniversalChatRow = memo(
         doUpdate,
         update: (item) => doUpdate(item),
         updateText: (text) => {
-          // If it's a simple text update and we are still in one slot, stay fast
           if (!text.includes("```") && !text.includes("![") && slotCount === 2) {
              const slot = partRefs.current[0];
              if (slot) {
@@ -236,7 +229,6 @@ export const UniversalChatRow = memo(
              }
              requestAnimationFrame(checkHeight);
           } else {
-             // Complex update, use full path
              doUpdate({ ...currentItemRef.current, content: text } as any);
           }
         },

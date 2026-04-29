@@ -1,12 +1,13 @@
 import { BaseModule } from '../../core/BaseModule';
 import { ChatEvent } from '../../types';
 import { setTextNode } from '../../../utils/dom';
+import { ChatStore } from '../../index';
 
 /**
  * Orchestrates direct DOM updates for streaming text.
  * Listens for updates from the StreamModule and pushes them to the Registry.
  */
-export class SyncModule extends BaseModule<any, ChatEvent> {
+export class SyncModule extends BaseModule<ChatStore, ChatEvent> {
   public interests: ChatEvent[] = [ChatEvent.MESSAGE_UPDATED];
 
   /**
@@ -14,7 +15,7 @@ export class SyncModule extends BaseModule<any, ChatEvent> {
    */
   public override onNotify(event: ChatEvent, id?: string | number, payload?: any): void {
     if (event === ChatEvent.MESSAGE_UPDATED && typeof id === 'number') {
-      const node = this.store.contentRegistryModule.get(id);
+      const node = this.store.contentRegistryModule.get(id, 0);
       if (node) {
         // Get the accumulated content from history
         const item = this.store.state.history[id];
