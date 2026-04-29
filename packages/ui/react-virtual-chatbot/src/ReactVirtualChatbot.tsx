@@ -84,7 +84,7 @@ const ReactVirtualChatbotInner = <T,>(
   const isAnchoringRef = useRef(false);
 
   const itemsRef = useRef(items);
-  itemsRef.current = items;
+  const lastPropsItemsRef = useRef(items);
 
   const engine = useMemo(
     () =>
@@ -98,6 +98,15 @@ const ReactVirtualChatbotInner = <T,>(
   );
   const engineRef = useRef(engine);
   engineRef.current = engine;
+
+  if (lastPropsItemsRef.current !== items) {
+    itemsRef.current = items;
+    lastPropsItemsRef.current = items;
+    // If the prop actually changes, we should also update the engine
+    if (engineRef.current) {
+      engineRef.current.updateOptions({ totalCount: items.length });
+    }
+  }
 
   const poolSize = useMemo(
     () => engine.getPoolSize(POOL_OVERHEAD, MAX_POOL),
@@ -164,10 +173,12 @@ const ReactVirtualChatbotInner = <T,>(
 
       const oldH = engine.getHeight(index);
       const isLast = index === (itemsRef.current as any).length - 1;
+      const item = (itemsRef.current as any)?.[index];
+      const isLoading = item?.metadata?.isLoading === true;
       
-      // For the last item (likely streaming), we only allow it to grow to avoid jitter.
-      // It can only shrink if it's not the last item anymore or if it's a significant manual change.
-      const finalH = isLast ? Math.max(oldH, h) : h;
+      // For the last item (likely streaming), we only allow it to grow to avoid jitter WHILE loading.
+      // Once loading is done, or if it's not the last item, we follow the real height.
+      const finalH = (isLast && isLoading) ? Math.max(oldH, h) : h;
       
       if (Math.abs(finalH - oldH) < 0.5) return;
 

@@ -189,13 +189,28 @@ function App() {
     try {
       inputRef.current?.setStreaming(true);
       
-      const inputHistory = [...history, { role: "user", content: userMessageContent }];
-      setHistory(inputHistory);
+      const nextHistory = [...history, { role: "user", content: userMessageContent }];
+      setHistory(nextHistory);
       
-      const messages = inputHistory.map(h => ({
+      let messages: any[] = nextHistory.map(h => ({
         role: h.role,
         content: h.content
       }));
+
+      // Support for multi-modal (images)
+      if (currentPendingFile) {
+        const lastMsg = messages[messages.length - 1];
+        const base64 = await new Promise<string>((resolve) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.readAsDataURL(currentPendingFile.file);
+        });
+        
+        lastMsg.content = [
+          { type: "text", text: userMessageContent },
+          { type: "image_url", image_url: { url: base64 } }
+        ];
+      }
 
       const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
         method: "POST",

@@ -19,6 +19,12 @@ body {
   background-color: var(--bg-main);
   color: var(--text-main);
   -webkit-font-smoothing: antialiased;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge */
+}
+
+body::-webkit-scrollbar {
+  display: none; /* Chrome/Safari */
 }
 
 /* App Layout Structure */
@@ -289,13 +295,20 @@ body {
 .user .universal-chat-row {
   background-color: #f0f4f9;
   padding: 12px 20px;
-  border-radius: 24px;
-  max-width: 75%;
+  border-radius: 18px; /* Refined from 24px to match screenshot */
+  max-width: 85%;
   width: fit-content;
-  max-height: 120px;
-  overflow: hidden;
+  max-height: 150px; /* Slightly increased */
+  border: 1px solid #e1e3e1; /* Subtle border for definition */
+  overflow-y: auto; /* Changed from hidden to allow scrolling */
   position: relative;
   transition: max-height 0.3s ease;
+  scrollbar-width: none; /* Hide scrollbar */
+  -ms-overflow-style: none;
+}
+
+.user .universal-chat-row::-webkit-scrollbar {
+  display: none;
 }
 
 .user .universal-chat-row.expanded {
@@ -387,6 +400,8 @@ body {
   width: 100%;
   max-width: var(--content-max-width);
   margin: 0 auto;
+  position: relative; /* For absolute expansion */
+  overflow: visible;
 }
 
 .chat-input-main-card {
@@ -401,7 +416,17 @@ body {
     0 1px 3px 1px rgba(60, 64, 67, 0.15);
   transition:
     box-shadow 0.2s,
-    border-color 0.2s;
+    border-color 0.2s,
+    min-height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.chat-input-main-card.is-expanded {
+  min-height: 400px;
+  max-height: 70vh;
+  display: flex;
+  flex-direction: column;
+  border-radius: 24px;
+  transition: min-height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .chat-input-main-card:focus-within {
@@ -411,7 +436,16 @@ body {
     0 4px 8px 3px rgba(60, 64, 67, 0.15);
 }
 
+.input-action-row-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  flex: 1;
+  min-height: 24px;
+}
+
 .input-action-row-top textarea {
+  flex: 1;
   width: 100%;
   border: none;
   background: transparent;
@@ -423,6 +457,42 @@ body {
   min-height: 24px;
   color: #1f1f1f;
   line-height: 1.5;
+  box-sizing: border-box; /* Added border-box */
+}
+
+.is-expanded .input-action-row-top textarea {
+  overflow-y: auto !important;
+  height: 100% !important;
+  max-height: none !important;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.is-expanded .input-action-row-top textarea::-webkit-scrollbar {
+  display: none;
+}
+
+.expand-toggle-btn {
+  background: none;
+  border: none;
+  padding: 4px;
+  cursor: pointer;
+  color: #444746;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s, transform 0.2s;
+  flex-shrink: 0;
+}
+
+.expand-toggle-btn:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+.expand-toggle-btn.active {
+  color: #1a73e8;
+  transform: rotate(180deg);
 }
 
 .input-action-row-bottom {
@@ -634,6 +704,10 @@ body {
   opacity: 1 !important;
   transform: scale(1) !important;
   color: #d93025; /* Solid Red */
+  width: 20px;
+  height: 20px;
+  top: 2px; /* Center it in the 24px slot */
+  left: 2px;
 }
 
 /* Code Block Styling - Gemini 2.0 Redesign */
@@ -731,11 +805,11 @@ body {
 
 .hljs-built_in,
 .hljs-type {
-  color: #267f99; /* Teal */
+  color: #267f99; /* Professional Teal for types */
 }
 
 .hljs-string {
-  color: #ca5010; /* Cam đất */
+  color: #a31515; /* Classic VS Code Red/Terracotta for strings */
 }
 
 .hljs-title,
@@ -743,24 +817,25 @@ body {
 .hljs-function,
 .hljs-property,
 .hljs-attr {
-  color: #c79602; /* Vàng đậm */
+  color: #795e26; /* More sophisticated gold/brown for functions */
   font-weight: 500;
 }
 
 .hljs-comment {
-  color: #008000; /* Green */
+  color: #008000; /* Rich Green */
+  font-style: italic;
 }
 
 .hljs-number,
 .hljs-literal {
-  color: #098658; /* Cyan/Green */
+  color: #098658; /* Cyan/Green for numbers and booleans */
 }
 
 .hljs-variable,
 .hljs-params,
 .hljs-template-tag,
 .hljs-link {
-  color: #001080; /* Navy Blue */
+  color: #1f1f1f; /* Back to neutral dark for variables */
 }
 
 .footer-disclaimer {

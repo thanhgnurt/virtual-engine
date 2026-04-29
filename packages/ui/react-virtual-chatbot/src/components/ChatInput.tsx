@@ -43,19 +43,15 @@ export const ChatInput = React.memo(
       const [isAttachMenuOpen, setIsAttachMenuOpen] = useState(false);
       const [isModelMenuOpen, setIsModelMenuOpen] = useState(false);
       const [isStreaming, setIsStreaming] = useState(false);
+      const [isExpanded, setIsExpanded] = useState(false);
 
       useImperativeHandle(ref, () => ({
         setStreaming: (streaming: boolean) => {
           setIsStreaming(streaming);
-          const container = containerRef.current;
-          const textarea = textareaRef.current;
-          if (container) {
-            if (streaming) {
-              container.classList.add("is-streaming");
-            } else {
-              container.classList.remove("is-streaming");
-            }
+          if (streaming) {
+            setIsExpanded(false); // Close expansion when streaming starts
           }
+          const textarea = textareaRef.current;
           if (textarea) {
             textarea.disabled = streaming;
             if (!streaming) {
@@ -82,13 +78,28 @@ export const ChatInput = React.memo(
           onSend(textarea.value);
           textarea.value = "";
           textarea.style.height = "auto";
+          setIsExpanded(false);
         }
       };
 
       const handleInput = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
         const textarea = e.target;
-        // Loại bỏ việc set height inline để tuân theo CSS max-height và auto-height của browser
         
+        // Auto-expand height (only if not in fixed expansion mode)
+        if (!isExpanded) {
+          textarea.style.height = "24px"; // Reset to base height to calculate scrollHeight correctly
+          const scrollHeight = textarea.scrollHeight;
+          
+          if (scrollHeight <= 24) {
+             textarea.style.height = "24px";
+          } else {
+             const nextHeight = Math.min(scrollHeight, 200); 
+             textarea.style.height = nextHeight + "px";
+          }
+        } else {
+          textarea.style.height = "100%"; // Fill the expanded card
+        }
+
         if (containerRef.current) {
           if (textarea.value.trim().length > 0) {
             containerRef.current.classList.add("has-content");
@@ -101,8 +112,8 @@ export const ChatInput = React.memo(
       const selectedModelName = availableModels.find(m => m.id === selectedModelId)?.name || "Gemini";
 
       return (
-        <div ref={containerRef} className={`chat-input-wrapper-gemini ${className}`}>
-          <div className="chat-input-main-card">
+        <div ref={containerRef} className={`chat-input-wrapper-gemini ${isExpanded ? 'is-expanded' : ''} ${isStreaming ? 'is-streaming' : ''} ${className}`}>
+          <div className={`chat-input-main-card ${isExpanded ? 'is-expanded' : ''}`}>
             {selectedFileUrl && (
               <div className="inner-file-preview">
                 <div className="preview-img-container">
@@ -125,6 +136,19 @@ export const ChatInput = React.memo(
                   }
                 }}
               />
+              <button 
+                className={`expand-toggle-btn ${isExpanded ? 'active' : ''}`}
+                onClick={() => setIsExpanded(!isExpanded)}
+                title={isExpanded ? "Collapse" : "Expand"}
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                  {isExpanded ? (
+                    <path d="M4 14l6-6M4 14h5M10 8v5M20 10l-6 6M20 10h-5M14 16v-5" />
+                  ) : (
+                    <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" />
+                  )}
+                </svg>
+              </button>
             </div>
             <div className="input-action-row-bottom">
               <div className="left-actions">

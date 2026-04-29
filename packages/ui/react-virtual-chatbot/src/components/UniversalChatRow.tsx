@@ -101,14 +101,14 @@ export const UniversalChatRow = memo(
         const role = item.role || "user";
         roleRef.current = role;
         
+        const isLoading = item.metadata?.isLoading === true;
+        const minHeight = item.metadata?.minHeight;
+        
         // Update Classes
-        containerRef.current.className = `message-row-container ${className || ""} ${role}`;
+        containerRef.current.className = `message-row-container ${className || ""} ${role} ${isLoading ? 'is-loading' : ''}`;
         
         if (sparkRef.current) sparkRef.current.style.display = role === "assistant" ? "flex" : "none";
         if (editRef.current) editRef.current.style.display = role === "user" ? "flex" : "none";
-        
-        const isLoading = item.metadata?.isLoading === true;
-        const minHeight = item.metadata?.minHeight;
         const content = item.content || "";
 
         if (containerRef.current) {
