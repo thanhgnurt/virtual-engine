@@ -250,11 +250,11 @@ function App() {
           <div className="ai-message-prefix">
             <GeminiSparkle isLoading={item.metadata?.isLoading} />
           </div>
-          <UniversalChatRow item={item} />
+          <UniversalChatRow item={item} codeHighlighting={true} />
         </div>
       );
     }
-    return <UniversalChatRow key={item?.id || index} item={item} />;
+    return <UniversalChatRow key={item?.id || index} item={item} codeHighlighting={true} />;
   }, []);
 
   return (
@@ -284,6 +284,7 @@ function App() {
             renderItem={renderMessage}
             itemHeight={100}
             followOutput={true}
+            codeHighlighting={true}
           />
         </main>
 

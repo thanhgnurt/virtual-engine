@@ -186,7 +186,6 @@ export const UniversalChatRow = memo(
         updateText: (text) => {
           // If it's a simple text update and we are still in one slot, stay fast
           if (!text.includes("```") && !text.includes("![") && slotCount === 2) {
-             if (dotsRef.current) dotsRef.current.style.display = "none";
              const slot = partRefs.current[0];
              if (slot) {
                slot.setVisible(true);
