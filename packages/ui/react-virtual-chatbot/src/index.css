@@ -193,6 +193,10 @@ body {
   align-items: flex-start;
 }
 
+.assistant.message-row-container {
+  padding-top: 16px; /* Fixed starting point for AI responses */
+}
+
 .message-row-container.user {
   flex-direction: row-reverse;
   justify-content: flex-start; /* Because it's row-reverse, flex-start is the right side */
@@ -244,7 +248,7 @@ body {
 }
 
 .universal-chat-row p {
-  margin: 12px 0;
+  margin: 0 0 12px; /* Remove top margin to prevent jump */
 }
 
 .universal-chat-row h3 {
@@ -287,7 +291,57 @@ body {
   background-color: #f0f4f9;
   padding: 12px 20px;
   border-radius: 24px;
-  width: 70%;
+  max-width: 75%;
+  width: fit-content;
+  max-height: 200px;
+  overflow: hidden;
+  position: relative;
+  transition: max-height 0.3s ease;
+}
+
+.user .universal-chat-row.expanded {
+  max-height: none;
+}
+
+.user .universal-chat-row:not(.expanded).is-long::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 40px;
+  background: linear-gradient(transparent, #f0f4f9);
+  pointer-events: none;
+}
+
+.user-expand-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #f0f4f9;
+  border: none;
+  color: #444746;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  position: absolute;
+  right: -40px;
+  top: 0; /* Changed from 50% to 0 */
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s;
+}
+
+.user-expand-btn:hover {
+  background: #e1e5ea;
+}
+
+.user-expand-btn svg {
+  transition: transform 0.3s;
+}
+
+.user-expand-btn.expanded svg {
+  transform: rotate(180deg);
 }
 
 /* Edit Icon (User) */
@@ -451,7 +505,7 @@ body {
   justify-content: center;
   width: 24px;
   height: 24px;
-  color: #4B90FF;
+  color: #4b90ff;
   position: relative;
 }
 
@@ -460,15 +514,22 @@ body {
 }
 
 @keyframes gemini-sparkle-pulse {
-  0%, 100% { transform: scale(1); opacity: 1; }
-  50% { transform: scale(1.15); opacity: 0.7; }
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.15);
+    opacity: 0.7;
+  }
 }
 
 .ai-message-prefix {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-top: 12px; /* Increased to move down a bit */
+  margin-top: 2px; /* Small adjustment for perfect line alignment */
   min-width: 24px;
   position: relative;
   overflow: visible;
@@ -490,12 +551,24 @@ body {
   animation: gemini-dot-pulse 1.4s infinite ease-in-out both;
 }
 
-.gemini-typing-dots span:nth-child(1) { animation-delay: -0.32s; }
-.gemini-typing-dots span:nth-child(2) { animation-delay: -0.16s; }
+.gemini-typing-dots span:nth-child(1) {
+  animation-delay: -0.32s;
+}
+.gemini-typing-dots span:nth-child(2) {
+  animation-delay: -0.16s;
+}
 
 @keyframes gemini-dot-pulse {
-  0%, 80%, 100% { transform: scale(0); opacity: 0.3; }
-  40% { transform: scale(1); opacity: 1; }
+  0%,
+  80%,
+  100% {
+    transform: scale(0);
+    opacity: 0.3;
+  }
+  40% {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
 
 .send-action-btn-new {

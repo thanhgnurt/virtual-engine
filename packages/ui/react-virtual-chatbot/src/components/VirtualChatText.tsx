@@ -1,5 +1,5 @@
 import MarkdownIt from "markdown-it";
-import { forwardRef, memo, useImperativeHandle, useRef } from "react";
+import { forwardRef, memo, useImperativeHandle, useRef, useEffect } from "react";
 import { ISubContentHandle } from "../types";
 import { setTextNode } from "../utils/dom";
 
@@ -12,6 +12,32 @@ const md = new MarkdownIt({
 export const VirtualChatText = memo(
   forwardRef<ISubContentHandle, { className?: string }>(({ className }, ref) => {
     const containerRef = useRef<HTMLDivElement>(null);
+    const contentRef = useRef<string>("");
+    const lastRenderedContentRef = useRef<string>("");
+
+    const forceRender = () => {
+      if (!containerRef.current || contentRef.current === lastRenderedContentRef.current) return;
+      
+      const content = contentRef.current;
+      const isSimple = !/[#*\[\]!{}`<>|]/.test(content);
+      
+      if (isSimple) {
+        setTextNode(containerRef.current, content);
+      } else {
+        containerRef.current.innerHTML = md.render(content);
+      }
+      lastRenderedContentRef.current = content;
+    };
+
+    useEffect(() => {
+      const handleMouseUp = () => {
+        // When user releases mouse, they might have finished selecting.
+        // Force a render if we have pending content.
+        forceRender();
+      };
+      window.addEventListener('mouseup', handleMouseUp);
+      return () => window.removeEventListener('mouseup', handleMouseUp);
+    }, []);
 
     useImperativeHandle(ref, () => ({
       setVisible: (visible) => {
@@ -20,19 +46,32 @@ export const VirtualChatText = memo(
         }
       },
       update: (content) => {
-        if (containerRef.current) {
-          // Fast Path: If content is very simple (no markdown symbols), use optimized setTextNode
-          // This avoids the overhead of markdown parsing and innerHTML assignment for plain text
-          const isSimple = !/[#*\[\]!{}`<>|]/.test(content);
-          
-          if (isSimple) {
-            setTextNode(containerRef.current, content);
-          } else {
-            // Render rich markdown for complex content
-            const html = md.render(content);
-            containerRef.current.innerHTML = html;
+        if (!containerRef.current) return;
+        if (contentRef.current === content) return;
+
+        contentRef.current = content;
+        
+        // Fast Path: Simple text updates via nodeValue usually don't break selection
+        const isSimple = !/[#*\[\]!{}`<>|]/.test(content);
+        
+        if (isSimple) {
+          setTextNode(containerRef.current, content);
+          lastRenderedContentRef.current = content;
+          return;
+        }
+
+        // Rich Path: Only skip if user is actively selecting
+        const selection = window.getSelection();
+        if (selection && selection.type === 'Range') {
+          if (containerRef.current.contains(selection.anchorNode) || containerRef.current.contains(selection.focusNode)) {
+            // User is selecting, defer. It will be rendered on next update or mouseup.
+            return;
           }
         }
+
+        // Render rich markdown
+        containerRef.current.innerHTML = md.render(content);
+        lastRenderedContentRef.current = content;
       },
     }));
 

@@ -73,12 +73,25 @@ function App() {
           }));
           setAvailableModels(models);
           if (models.length > 0) {
-            setSelectedModel(prev => models.find(m => m.id === prev?.id) || models.find(m => m.id.includes("google/gemini-2.0-flash-lite:free")) || models[0]);
+            const savedModelId = localStorage.getItem("selected-model-id");
+            setSelectedModel(prev => 
+              models.find(m => m.id === savedModelId) || 
+              models.find(m => m.id === prev?.id) || 
+              models.find(m => m.id.includes("google/gemini-2.0-flash-lite:free")) || 
+              models[0]
+            );
           }
         }
       })
       .catch(e => console.error("Lỗi lấy model OpenRouter:", e));
   }, [apiKey]);
+
+  // Persist Model Selection
+  useEffect(() => {
+    if (selectedModel) {
+      localStorage.setItem("selected-model-id", selectedModel.id);
+    }
+  }, [selectedModel]);
 
   const handleFileSelect = (file: File) => {
     const preview = URL.createObjectURL(file);

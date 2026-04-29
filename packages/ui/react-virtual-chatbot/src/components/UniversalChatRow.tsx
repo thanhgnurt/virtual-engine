@@ -1,4 +1,4 @@
-import { forwardRef, memo, useImperativeHandle, useRef, useLayoutEffect } from "react";
+import { forwardRef, memo, useImperativeHandle, useRef, useLayoutEffect, useState, useCallback } from "react";
 import {
   ChatMessage,
   ISubContentHandle,
@@ -18,6 +18,12 @@ const UserEditIcon = () => (
   </div>
 );
 
+const ChevronIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M6 9l6 6 6-6" />
+  </svg>
+);
+
 export const UniversalChatRow = memo(
   forwardRef<IVirtualChatRowHandle<ChatMessage>, { className?: string; item?: ChatMessage | null }>(
     ({ className, item: initialItem }, ref) => {
@@ -28,19 +34,36 @@ export const UniversalChatRow = memo(
       const dotsRef = useRef<HTMLDivElement>(null);
       const editRef = useRef<HTMLDivElement>(null);
       const containerRef = useRef<HTMLDivElement>(null);
+      const bubbleRef = useRef<HTMLDivElement>(null);
+      const [isExpanded, setIsExpanded] = useState(false);
+      const [isLong, setIsLong] = useState(false);
+      const roleRef = useRef<string>("user");
+
+      const checkHeight = useCallback(() => {
+        if (bubbleRef.current && roleRef.current === 'user') {
+          const hasOverflow = bubbleRef.current.scrollHeight > 200;
+          setIsLong(hasOverflow);
+        }
+      }, []);
 
       const doUpdate = (item: ChatMessage | null) => {
         if (!item || !containerRef.current) return;
         
+        const role = item.role || "user";
+        roleRef.current = role;
         const rowElement = containerRef.current;
         rowElement.classList.remove("user", "assistant");
-        if (item.role) rowElement.classList.add(item.role);
+        rowElement.classList.add(role);
         
+        // Reset expansion when item changes
+        setIsExpanded(false);
+        setIsLong(false);
+
         const isLoading = item.metadata?.isLoading === true;
         const hasContent = !!(item.content || (item.parts && item.parts.length > 0));
 
         if (sparkRef.current) {
-          sparkRef.current.style.display = item.role === "assistant" ? "flex" : "none";
+          sparkRef.current.style.display = role === "assistant" ? "flex" : "none";
           const sparkleCont = sparkRef.current.querySelector('.gemini-sparkle');
           if (sparkleCont) {
             if (isLoading) sparkleCont.classList.add('is-loading');
@@ -109,17 +132,18 @@ export const UniversalChatRow = memo(
           targetRef.current?.setVisible(true);
           targetRef.current?.update(content, item.metadata);
         }
+
+        // Delay check to allow content to render
+        requestAnimationFrame(checkHeight);
       };
 
       useImperativeHandle(ref, () => ({
         update: (item, _index, _rowElement, _isVisible) => doUpdate(item),
         updateText: (text) => {
           if (!containerRef.current) return;
-          
           if (dotsRef.current) dotsRef.current.style.display = "none";
-
-          const parts = text.split("```");
           
+          const parts = text.split("```");
           if (parts.length === 1) {
             textRef.current?.setVisible(true);
             textRef.current?.update(text);
@@ -127,15 +151,10 @@ export const UniversalChatRow = memo(
           } else {
             const preText = parts[0];
             const codeSegment = parts[1] || "";
-            const postText = parts.slice(2).join("```");
-
             if (preText.trim()) {
               textRef.current?.setVisible(true);
               textRef.current?.update(preText);
-            } else {
-              textRef.current?.setVisible(false);
             }
-
             let lang = "";
             let code = codeSegment;
             const firstNewline = codeSegment.indexOf("\n");
@@ -143,10 +162,10 @@ export const UniversalChatRow = memo(
               lang = codeSegment.substring(0, firstNewline).trim();
               code = codeSegment.substring(firstNewline + 1);
             }
-            
             codeRef.current?.setVisible(true);
             codeRef.current?.update(code, { language: lang });
           }
+          requestAnimationFrame(checkHeight);
         },
       }));
 
@@ -156,7 +175,11 @@ export const UniversalChatRow = memo(
 
       return (
         <div ref={containerRef} className={`message-row-container ${className || ""}`}>
-          <div ref={sparkRef} className="ai-message-prefix" style={{ display: "none" }}>
+          <div 
+            ref={sparkRef} 
+            className="ai-message-prefix" 
+            style={{ display: initialItem?.role === "assistant" ? "flex" : "none" }}
+          >
             <GeminiSparkle isLoading={initialItem?.metadata?.isLoading} />
             <div ref={dotsRef} className="gemini-typing-dots" style={{ display: "none" }}>
               <span></span>
@@ -165,15 +188,28 @@ export const UniversalChatRow = memo(
             </div>
           </div>
           <div className="message-bubble-wrapper">
-            <div className="message-bubble-content-row">
+            <div className="message-bubble-content-row" style={{ position: 'relative' }}>
               <div ref={editRef} style={{ display: "none" }}>
                 <UserEditIcon />
               </div>
-              <div className="universal-chat-row">
+              <div 
+                ref={bubbleRef}
+                className={`universal-chat-row ${isExpanded ? 'expanded' : ''} ${isLong ? 'is-long' : ''}`}
+              >
                 <VirtualChatText ref={textRef} className="chat-content-text" />
                 <VirtualChatCode ref={codeRef} className="chat-content-code" />
                 <VirtualChatImage ref={imageRef} className="chat-content-image" />
               </div>
+
+              {isLong && (
+                <button 
+                  className={`user-expand-btn ${isExpanded ? 'expanded' : ''}`}
+                  onClick={() => setIsExpanded(!isExpanded)}
+                  title={isExpanded ? "Collapse" : "Expand text"}
+                >
+                  <ChevronIcon />
+                </button>
+              )}
             </div>
           </div>
         </div>
