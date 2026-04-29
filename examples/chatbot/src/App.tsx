@@ -47,6 +47,7 @@ function App() {
   const [availableModels, setAvailableModels] = useState<ModelInfo[]>([]);
   const [selectedModel, setSelectedModel] = useState<ModelInfo | null>(null);
   const [pendingFile, setPendingFile] = useState<PendingFile | null>(null);
+  const [history, setHistory] = useState<{ role: string; content: string }[]>([]);
   
   const chatbotRef = useRef<ReactVirtualChatbotHandle<ChatMessage>>(null);
   const inputRef = useRef<ChatInputHandle>(null);
@@ -138,7 +139,15 @@ function App() {
       }
     }
 
-    const userMsg: ChatMessage = { id: `u-${Date.now()}`, role: "user", content: visualContent };
+    let userMsg: ChatMessage = { id: `u-${Date.now()}`, role: "user", content: visualContent };
+    
+    if (pendingFile) {
+      userMsg.parts = [
+        { type: "image", content: pendingFile.preview },
+        { type: "text", content: text }
+      ];
+    }
+
     const aiMsg: ChatMessage = { 
       id: `a-${Date.now()}`, 
       role: "assistant", 
@@ -157,9 +166,13 @@ function App() {
     try {
       inputRef.current?.setStreaming(true);
       
-      const messages = [
-        { role: "user", content: userMessageContent }
-      ];
+      const inputHistory = [...history, { role: "user", content: userMessageContent }];
+      setHistory(inputHistory);
+      
+      const messages = inputHistory.map(h => ({
+        role: h.role,
+        content: h.content
+      }));
 
       const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
         method: "POST",
@@ -211,6 +224,7 @@ function App() {
           }
         }
       }
+      setHistory(prev => [...prev, { role: "assistant", content: fullText }]);
     } catch (error: any) {
       chatbot.updateMessageText(aiIdx, `❌ Lỗi: ${error.message}`);
     } finally {

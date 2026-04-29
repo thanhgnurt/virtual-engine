@@ -415,7 +415,7 @@ const ReactVirtualChatbotInner = <T,>(
             contentRef.current.style.height = `${targetHeightRef.current}px`;
         }
       }
-      isAtBottomRef.current = Math.abs(sh - st - ch) < 20;
+      isAtBottomRef.current = Math.abs(sh - st - ch) < 5;
       updateRange(st);
       if (performance.now() - prevScrollTime.current < SCROLL_STOP_DELAY) {
         rafId.current = requestAnimationFrame(onRafUpdate);

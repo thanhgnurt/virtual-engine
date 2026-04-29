@@ -126,6 +126,29 @@ export const UniversalChatRow = memo(
             codeRef.current?.setVisible(true);
             codeRef.current?.update(code, { language: lang });
           }
+        } else if (content.includes("![")) {
+          // Detect markdown image ![alt](url)
+          const imgMatch = content.match(/!\[(.*?)\]\((.*?)\)/);
+          if (imgMatch) {
+            const preText = content.substring(0, imgMatch.index || 0);
+            const postText = content.substring((imgMatch.index || 0) + imgMatch[0].length);
+            const imageUrl = imgMatch[2];
+
+            if (preText.trim()) {
+              textRef.current?.setVisible(true);
+              textRef.current?.update(preText);
+            }
+
+            imageRef.current?.setVisible(true);
+            imageRef.current?.update(imageUrl);
+
+            if (postText.trim()) {
+              textRef.current?.update((preText + "\n\n" + postText).trim());
+            }
+          } else {
+            textRef.current?.setVisible(true);
+            textRef.current?.update(content);
+          }
         } else if (content) {
           const type = item.type || "text";
           const targetRef = type === "text" ? textRef : type === "code" ? codeRef : imageRef;

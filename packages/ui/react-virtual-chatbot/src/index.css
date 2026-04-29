@@ -243,7 +243,6 @@ body {
   color: #1f1f1f;
   word-wrap: break-word;
   max-width: 100%;
-  overflow-x: hidden;
   min-width: 0;
 }
 
@@ -260,7 +259,7 @@ body {
 .universal-chat-row ul,
 .universal-chat-row ol {
   margin: 12px 0;
-  padding-left: 24px;
+  padding-left: 32px; /* Increased from 24px */
 }
 
 .universal-chat-row li {
@@ -640,7 +639,6 @@ body {
 /* Code Block Styling */
 .virtual-chat-code-wrapper {
   margin: 16px 0;
-  background-color: #f8f9fa;
   border-radius: 16px;
   border: 1px solid #dfe1e5;
   overflow: hidden;
@@ -692,4 +690,98 @@ body {
   color: #444746;
   margin-top: 12px;
   text-align: center;
+}
+
+/* Model Selector Dropdown */
+.model-dropdown-container {
+  position: relative;
+  display: flex;
+  margin-right: 8px;
+}
+
+.model-floating-menu {
+  position: absolute;
+  bottom: calc(100% + 12px);
+  right: 0;
+  background: #ffffff; /* Changed from #f0f4f9 to white */
+  border-radius: 12px; /* Reduced border radius */
+  padding: 8px 4px 8px 8px; /* Adjusted padding for scrollbar */
+  width: 280px;
+  max-height: 400px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  display: flex;
+  flex-direction: column;
+  z-index: 100;
+  animation: menuFadeUp 0.2s ease-out;
+  border: 1px solid #dfe1e5;
+}
+
+.menu-scroll-area {
+  overflow-y: auto;
+  max-height: 100%;
+  padding-right: 4px;
+}
+
+/* Custom scrollbar for dropdown */
+.menu-scroll-area::-webkit-scrollbar {
+  width: 6px; /* Larger scrollbar */
+}
+.menu-scroll-area::-webkit-scrollbar-track {
+  background: transparent;
+}
+.menu-scroll-area::-webkit-scrollbar-thumb {
+  background: #dfe1e5;
+  border-radius: 10px;
+}
+.menu-scroll-area::-webkit-scrollbar-thumb:hover {
+  background: #bdc1c6;
+}
+
+.model-floating-menu .menu-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  border-radius: 8px;
+  color: #1f1f1f;
+  cursor: pointer;
+  transition: background 0.2s ease;
+  font-size: 14px;
+  justify-content: space-between;
+}
+
+.model-floating-menu .menu-item:hover {
+  background: #f0f4f9;
+}
+
+.model-floating-menu .menu-item.active {
+  background: #e8f0fe;
+}
+
+.model-floating-menu .item-icon {
+  font-size: 18px;
+  margin-right: 4px;
+}
+
+.model-floating-menu .item-name {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.model-floating-menu .check-mark {
+  color: #1a73e8;
+  margin-left: 8px;
+}
+
+@keyframes menuFadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
