@@ -219,13 +219,24 @@ export const UniversalChatRow = memo(
         if (currentItemRef.current) {
           doUpdate(currentItemRef.current);
           
-          // Register first text slot for direct DOM sync
           const index = (currentItemRef.current as any).index;
           if (typeof index === 'number') {
-            const firstSlot = partRefs.current[0];
-            const el = (firstSlot as any)?.getTextElement?.();
-            if (el) {
-              store.registryModule.register(index, el);
+            // Level 1: Register Row Container
+            if (containerRef.current) {
+              store.rowRegistryModule.register(index, containerRef.current);
+            }
+
+            // Level 2: Register Content Slots (TextNodes)
+            partRefs.current.forEach((slot, i) => {
+              const el = (slot as any)?.getTextElement?.();
+              if (el) {
+                store.contentRegistryModule.register(index, i, el);
+              }
+            });
+
+            // Level 3: Register UI Components
+            if (dotsRef.current) {
+              store.componentRegistryModule.register(index, 'dots', dotsRef.current);
             }
           }
         }
@@ -235,7 +246,11 @@ export const UniversalChatRow = memo(
         return () => {
           const index = (currentItemRef.current as any)?.index;
           if (typeof index === 'number') {
-            store.registryModule.unregister(index);
+            store.rowRegistryModule.unregister(index);
+            // Cleanup contents
+            partRefs.current.forEach((_, i) => {
+               store.contentRegistryModule.unregister(index, i);
+            });
           }
         };
       }, []);

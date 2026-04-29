@@ -14,8 +14,8 @@ export class SyncModule extends BaseModule<any, ChatEvent> {
    */
   public override onNotify(event: ChatEvent, id?: string | number, payload?: any): void {
     if (event === ChatEvent.MESSAGE_UPDATED && typeof id === 'number') {
-      const el = this.store.registryModule.getElement(id);
-      if (el) {
+      const node = this.store.contentRegistryModule.get(id);
+      if (node) {
         // Get the accumulated content from history
         const item = this.store.state.history[id];
         if (item) {
@@ -24,7 +24,7 @@ export class SyncModule extends BaseModule<any, ChatEvent> {
                 : (item.content || "");
             
             // Direct DOM update - No React Render!
-            setTextNode(el, fullContent);
+            setTextNode(node as any, fullContent);
         }
       }
     }

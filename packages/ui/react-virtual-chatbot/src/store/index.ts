@@ -3,7 +3,9 @@ import { ChatEvent, ChatState } from './types';
 import { HistoryModule } from './modules/data/HistoryModule';
 import { PersistModule } from './modules/data/PersistModule';
 import { WorkerModule } from './modules/infra/WorkerModule';
-import { RegistryModule } from './modules/ui/RegistryModule';
+import { RowRegistryModule } from './modules/ui/RowRegistryModule';
+import { ContentRegistryModule } from './modules/ui/ContentRegistryModule';
+import { ComponentRegistryModule } from './modules/ui/ComponentRegistryModule';
 import { SyncModule } from './modules/ui/SyncModule';
 import { LayoutModule } from './modules/ui/LayoutModule';
 import { IChatFetcher } from '../worker/types';
@@ -22,7 +24,9 @@ export class ChatStore extends BaseStore<ChatState, ChatEvent> {
   // Modules
   public historyModule!: HistoryModule;
   public workerModule!: WorkerModule;
-  public registryModule!: RegistryModule;
+  public rowRegistryModule!: RowRegistryModule;
+  public contentRegistryModule!: ContentRegistryModule;
+  public componentRegistryModule!: ComponentRegistryModule;
   public syncModule!: SyncModule;
   public layoutModule!: LayoutModule;
 
@@ -50,7 +54,9 @@ export class ChatStore extends BaseStore<ChatState, ChatEvent> {
     this.workerModule = this.registerModule(new WorkerModule(options.worker, options.fallbackFetcher));
     
     // 3. UI Layer
-    this.registryModule = this.registerModule(new RegistryModule());
+    this.rowRegistryModule = this.registerModule(new RowRegistryModule());
+    this.contentRegistryModule = this.registerModule(new ContentRegistryModule());
+    this.componentRegistryModule = this.registerModule(new ComponentRegistryModule());
     this.syncModule = this.registerModule(new SyncModule());
     this.layoutModule = this.registerModule(new LayoutModule());
   }

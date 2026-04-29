@@ -148,10 +148,14 @@ const ReactVirtualChatbotInner = (
   const engineRef = useRef(engine);
   engineRef.current = engine;
 
+  // Stable Ref for callback to avoid infinite loops
+  const onStateChangeRef = useRef(onStateChange);
+  onStateChangeRef.current = onStateChange;
+
   // Subscribe to store changes
   useEffect(() => {
     // Sync initial state (including persisted values)
-    if (onStateChange) onStateChange({ ...store.state });
+    if (onStateChangeRef.current) onStateChangeRef.current({ ...store.state });
 
     const unsub = store.subscribe(ChatEvent.HISTORY_CHANGED, () => {
       const nextHistory = [...store.state.history];
@@ -171,15 +175,15 @@ const ReactVirtualChatbotInner = (
         });
       }
       
-      if (onStateChange) onStateChange({ ...store.state });
+      if (onStateChangeRef.current) onStateChangeRef.current({ ...store.state });
     });
     
     const unsubStream = store.subscribe(ChatEvent.STREAM_STATE_CHANGED, () => {
-      if (onStateChange) onStateChange({ ...store.state });
+      if (onStateChangeRef.current) onStateChangeRef.current({ ...store.state });
     });
 
     const unsubConfig = store.subscribe(ChatEvent.CONFIG_CHANGED, () => {
-      if (onStateChange) onStateChange({ ...store.state });
+      if (onStateChangeRef.current) onStateChangeRef.current({ ...store.state });
     });
 
     return () => {
@@ -187,7 +191,7 @@ const ReactVirtualChatbotInner = (
       unsubStream();
       unsubConfig();
     };
-  }, [store, engine, onStateChange]);
+  }, [store, engine]); // Removed onStateChange from dependencies
 
   const poolSize = useMemo(
     () => engine.getPoolSize(POOL_OVERHEAD, MAX_POOL),
