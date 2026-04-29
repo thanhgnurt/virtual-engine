@@ -163,9 +163,15 @@ const ReactVirtualChatbotInner = <T,>(
       if (h <= 0) return;
 
       const oldH = engine.getHeight(index);
-      if (Math.abs(h - oldH) < 0.5) return;
+      const isLast = index === (itemsRef.current as any).length - 1;
+      
+      // For the last item (likely streaming), we only allow it to grow to avoid jitter.
+      // It can only shrink if it's not the last item anymore or if it's a significant manual change.
+      const finalH = isLast ? Math.max(oldH, h) : h;
+      
+      if (Math.abs(finalH - oldH) < 0.5) return;
 
-      const changed = engine.setHeight(index, h);
+      const changed = engine.setHeight(index, finalH);
 
       if (changed) {
         if (container.style.scrollBehavior !== "auto") {
@@ -596,6 +602,56 @@ const ReactVirtualChatbotInner = <T,>(
       targetHeightRef.current = actualHeight + height;
       if (contentRef.current)
         contentRef.current.style.height = `${targetHeightRef.current}px`;
+    },
+    focusLastItem: () => {
+      const container = containerRef.current;
+      const its = itemsRef.current as any;
+      const count = its.length;
+      if (!container || count < 2) return;
+
+      const viewportHeight = container.clientHeight;
+      const aiIdx = count - 1;
+      const userIdx = count - 2;
+
+      // 1. Clear minHeight from ALL items first to ensure only the last one is focused
+      for (let i = 0; i < count; i++) {
+        if (its[i].metadata?.minHeight) {
+          its[i].metadata = { ...its[i].metadata, minHeight: undefined };
+          // If in pool, update it
+          for (let s = 0; s < poolSize; s++) {
+            if (lastIndicesRef.current[s] === i) {
+              const slot = refsRef.current[s];
+              if (slot) slot.update(its[i], i, wrapperRefs.current[s], true);
+              break;
+            }
+          }
+        }
+      }
+      
+      // 2. Calculate and set new minHeight for the last item
+      const userHeight = engine.getHeight(userIdx);
+      const targetMinHeight = Math.max(0, viewportHeight - userHeight);
+      
+      if (its[aiIdx]) {
+        its[aiIdx].metadata = { ...its[aiIdx].metadata, minHeight: `${targetMinHeight}px` };
+        engine.setHeight(aiIdx, Math.max(engine.getHeight(aiIdx), targetMinHeight));
+        
+        if (contentRef.current) {
+          contentRef.current.style.height = `${engine.getTotalHeight()}px`;
+        }
+        
+        for (let s = 0; s < poolSize; s++) {
+          if (lastIndicesRef.current[s] === aiIdx) {
+            const slot = refsRef.current[s];
+            if (slot) slot.update(its[aiIdx], aiIdx, wrapperRefs.current[s], true);
+            break;
+          }
+        }
+        
+        updateUI();
+        const offset = engine.getOffset(userIdx);
+        container.scrollTop = offset;
+      }
     },
   }));
 

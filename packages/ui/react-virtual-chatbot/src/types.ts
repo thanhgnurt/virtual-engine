@@ -104,6 +104,10 @@ export interface ReactVirtualChatbotHandle<T = any> {
    */
   setBottomBuffer: (height: number) => void;
   /**
+   * Focus the last item in the chat.
+   */
+  focusLastItem: () => void;
+  /**
    * Get the true total number of chat items managed internally.
    */
   getTotalCount: () => number;

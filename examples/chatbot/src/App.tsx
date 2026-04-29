@@ -143,13 +143,12 @@ function App() {
       id: `a-${Date.now()}`, 
       role: "assistant", 
       content: "", 
-      metadata: { minHeight: "80vh", isLoading: true } 
+      metadata: { isLoading: true } 
     };
 
     chatbot.appendItems([userMsg, aiMsg], false);
     const aiIdx = chatbot.getTotalCount() - 1;
-    chatbot.updateItemHeight(aiIdx, window.innerHeight * 0.8);
-    chatbot.scrollToIndex(aiIdx - 1);
+    chatbot.focusLastItem();
     activeAiIdxRef.current = aiIdx;
 
     const currentPendingFile = pendingFile;
