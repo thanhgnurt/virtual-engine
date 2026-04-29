@@ -24,19 +24,67 @@ const ChevronIcon = () => (
   </svg>
 );
 
+/**
+ * A dynamic slot that can render Text, Code, or Image.
+ */
+const UniversalPartSlot = memo(forwardRef<ISubContentHandle, { className?: string, codeHighlighting?: boolean }>(({ codeHighlighting }, ref) => {
+  const textRef = useRef<ISubContentHandle>(null);
+  const codeRef = useRef<ISubContentHandle>(null);
+  const imageRef = useRef<ISubContentHandle>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useImperativeHandle(ref, () => ({
+    update: (content: string, metadata?: any) => {
+      const type = metadata?.type || "text";
+      
+      // Hide all first
+      textRef.current?.setVisible(false);
+      codeRef.current?.setVisible(false);
+      imageRef.current?.setVisible(false);
+
+      if (type === "text") {
+        textRef.current?.setVisible(true);
+        textRef.current?.update(content);
+      } else if (type === "code") {
+        codeRef.current?.setVisible(true);
+        codeRef.current?.update(content, metadata);
+      } else if (type === "image") {
+        imageRef.current?.setVisible(true);
+        imageRef.current?.update(content, metadata);
+      }
+    },
+    setVisible: (visible: boolean) => {
+      if (containerRef.current) {
+        containerRef.current.style.display = visible ? "block" : "none";
+      }
+    }
+  }));
+
+  return (
+    <div ref={containerRef} style={{ display: "none" }}>
+      <VirtualChatText ref={textRef} className="chat-content-text" />
+      <VirtualChatCode ref={codeRef} className="chat-content-code" codeHighlighting={codeHighlighting} />
+      <VirtualChatImage ref={imageRef} className="chat-content-image" />
+    </div>
+  );
+}));
+
 export const UniversalChatRow = memo(
-  forwardRef<IVirtualChatRowHandle<ChatMessage>, { className?: string; item?: ChatMessage | null }>(
-    ({ className, item: initialItem }, ref) => {
-      const textRef = useRef<ISubContentHandle>(null);
-      const codeRef = useRef<ISubContentHandle>(null);
-      const imageRef = useRef<ISubContentHandle>(null);
+  forwardRef<IVirtualChatRowHandle<ChatMessage>, { className?: string; item?: ChatMessage | null; codeHighlighting?: boolean }>(
+    ({ className, item: initialItem, codeHighlighting }, ref) => {
+      // Core Refs
+      const containerRef = useRef<HTMLDivElement>(null);
+      const bubbleRef = useRef<HTMLDivElement>(null);
       const sparkRef = useRef<HTMLDivElement>(null);
       const dotsRef = useRef<HTMLDivElement>(null);
       const editRef = useRef<HTMLDivElement>(null);
-      const containerRef = useRef<HTMLDivElement>(null);
-      const bubbleRef = useRef<HTMLDivElement>(null);
+      const partRefs = useRef<(ISubContentHandle | null)[]>([]);
+      const currentItemRef = useRef<ChatMessage | null>(initialItem || null);
+
+      // State
       const [isExpanded, setIsExpanded] = useState(false);
       const [isLong, setIsLong] = useState(false);
+      const [slotCount, setSlotCount] = useState(5); // Increased from 2 to 5 for better initial coverage
       const roleRef = useRef<string>("user");
 
       const checkHeight = useCallback(() => {
@@ -48,168 +96,122 @@ export const UniversalChatRow = memo(
 
       const doUpdate = (item: ChatMessage | null) => {
         if (!item || !containerRef.current) return;
+        currentItemRef.current = item;
         
         const role = item.role || "user";
         roleRef.current = role;
-        const rowElement = containerRef.current;
-        rowElement.classList.remove("user", "assistant");
-        rowElement.classList.add(role);
         
-        // Reset expansion when item changes
-        setIsExpanded(false);
-        setIsLong(false);
-
+        // Update Classes
+        containerRef.current.className = `message-row-container ${className || ""} ${role}`;
+        
+        if (sparkRef.current) sparkRef.current.style.display = role === "assistant" ? "flex" : "none";
+        if (editRef.current) editRef.current.style.display = role === "user" ? "flex" : "none";
+        
         const isLoading = item.metadata?.isLoading === true;
-        const hasContent = !!(item.content || (item.parts && item.parts.length > 0));
-
-        if (sparkRef.current) {
-          sparkRef.current.style.display = role === "assistant" ? "flex" : "none";
-          const sparkleCont = sparkRef.current.querySelector('.gemini-sparkle');
-          if (sparkleCont) {
-            if (isLoading) sparkleCont.classList.add('is-loading');
-            else sparkleCont.classList.remove('is-loading');
-          }
-        }
-
-        if (dotsRef.current) {
-          dotsRef.current.style.display = (isLoading && !hasContent) ? "flex" : "none";
-        }
-        
-        if (editRef.current) {
-          editRef.current.style.display = item.role === "user" ? "flex" : "none";
-        }
-
-        if (item.metadata?.minHeight) {
-          rowElement.style.minHeight = item.metadata.minHeight;
-        } else {
-          rowElement.style.minHeight = "";
-        }
-
-        // Reset visibility
-        textRef.current?.setVisible(false);
-        codeRef.current?.setVisible(false);
-        imageRef.current?.setVisible(false);
-
         const content = item.content || "";
-
+        
+        // --- 1. Content Parsing ---
+        const finalParts: any[] = [];
         if (item.parts && item.parts.length > 0) {
-          item.parts.forEach((part) => {
-            if (part.type === "text") {
-              textRef.current?.setVisible(true);
-              textRef.current?.update(part.content);
-            } else if (part.type === "code") {
-              codeRef.current?.setVisible(true);
-              codeRef.current?.update(part.content, part.metadata);
-            } else if (part.type === "image") {
-              imageRef.current?.setVisible(true);
-              imageRef.current?.update(part.metadata?.url || part.content, part.metadata);
-            }
-          });
+          finalParts.push(...item.parts);
         } else if (content.includes("```")) {
-          const parts = content.split("```");
-          const preText = parts[0];
-          const codeSegment = parts[1] || "";
-          
-          if (preText.trim()) {
-            textRef.current?.setVisible(true);
-            textRef.current?.update(preText);
-          }
-          
-          if (codeSegment) {
-            let lang = "";
-            let code = codeSegment;
-            const firstNewline = codeSegment.indexOf("\n");
-            if (firstNewline !== -1 && firstNewline < 20) {
-              lang = codeSegment.substring(0, firstNewline).trim();
-              code = codeSegment.substring(firstNewline + 1);
+          const rawParts = content.split("```");
+          for (let i = 0; i < rawParts.length; i++) {
+            if (i % 2 === 0) {
+              if (rawParts[i].trim() || rawParts.length === 1) {
+                 finalParts.push({ type: "text", content: rawParts[i] });
+              }
+            } else {
+              let lang = "";
+              let code = rawParts[i];
+              const firstNewline = rawParts[i].indexOf("\n");
+              if (firstNewline !== -1 && firstNewline < 20) {
+                lang = rawParts[i].substring(0, firstNewline).trim();
+                code = rawParts[i].substring(firstNewline + 1);
+              }
+              finalParts.push({ type: "code", content: code, metadata: { language: lang } });
             }
-            codeRef.current?.setVisible(true);
-            codeRef.current?.update(code, { language: lang });
           }
         } else if (content.includes("![")) {
-          // Detect markdown image ![alt](url)
           const imgMatch = content.match(/!\[(.*?)\]\((.*?)\)/);
           if (imgMatch) {
             const preText = content.substring(0, imgMatch.index || 0);
             const postText = content.substring((imgMatch.index || 0) + imgMatch[0].length);
-            const imageUrl = imgMatch[2];
-
-            if (preText.trim()) {
-              textRef.current?.setVisible(true);
-              textRef.current?.update(preText);
-            }
-
-            imageRef.current?.setVisible(true);
-            imageRef.current?.update(imageUrl);
-
-            if (postText.trim()) {
-              textRef.current?.update((preText + "\n\n" + postText).trim());
-            }
+            if (preText.trim()) finalParts.push({ type: "text", content: preText });
+            finalParts.push({ type: "image", content: imgMatch[2] });
+            if (postText.trim()) finalParts.push({ type: "text", content: postText });
           } else {
-            textRef.current?.setVisible(true);
-            textRef.current?.update(content);
+            finalParts.push({ type: "text", content });
           }
         } else if (content) {
-          const type = item.type || "text";
-          const targetRef = type === "text" ? textRef : type === "code" ? codeRef : imageRef;
-          targetRef.current?.setVisible(true);
-          targetRef.current?.update(content, item.metadata);
+          finalParts.push({ type: "text", content });
         }
 
-        // Delay check to allow content to render
+        const hasContent = finalParts.length > 0;
+        if (dotsRef.current) {
+          dotsRef.current.style.display = (isLoading && !hasContent) ? "flex" : "none";
+        }
+
+        // --- 2. Dynamic Slot Management ---
+        if (finalParts.length > slotCount) {
+          setSlotCount(finalParts.length);
+          return; // Wait for re-render
+        }
+
+        // --- 3. Rendering ---
+        // Hide all slots first
+        for (let i = 0; i < slotCount; i++) {
+          partRefs.current[i]?.setVisible(false);
+        }
+
+        finalParts.forEach((part, i) => {
+          const slot = partRefs.current[i];
+          if (slot) {
+            slot.setVisible(true);
+            slot.update(part.content, { ...part.metadata, type: part.type });
+          }
+        });
+
         requestAnimationFrame(checkHeight);
       };
 
       useImperativeHandle(ref, () => ({
-        update: (item, _index, _rowElement, _isVisible) => doUpdate(item),
+        doUpdate,
+        update: (item) => doUpdate(item),
         updateText: (text) => {
-          if (!containerRef.current) return;
-          if (dotsRef.current) dotsRef.current.style.display = "none";
-          
-          const parts = text.split("```");
-          if (parts.length === 1) {
-            textRef.current?.setVisible(true);
-            textRef.current?.update(text);
-            codeRef.current?.setVisible(false);
+          // If it's a simple text update and we are still in one slot, stay fast
+          if (!text.includes("```") && !text.includes("![") && slotCount === 2) {
+             if (dotsRef.current) dotsRef.current.style.display = "none";
+             const slot = partRefs.current[0];
+             if (slot) {
+               slot.setVisible(true);
+               slot.update(text, { type: "text" });
+             }
+             requestAnimationFrame(checkHeight);
           } else {
-            const preText = parts[0];
-            const codeSegment = parts[1] || "";
-            if (preText.trim()) {
-              textRef.current?.setVisible(true);
-              textRef.current?.update(preText);
-            }
-            let lang = "";
-            let code = codeSegment;
-            const firstNewline = codeSegment.indexOf("\n");
-            if (firstNewline !== -1 && firstNewline < 20) {
-              lang = codeSegment.substring(0, firstNewline).trim();
-              code = codeSegment.substring(firstNewline + 1);
-            }
-            codeRef.current?.setVisible(true);
-            codeRef.current?.update(code, { language: lang });
+             // Complex update, use full path
+             doUpdate({ ...currentItemRef.current, content: text } as any);
           }
-          requestAnimationFrame(checkHeight);
         },
+        container: containerRef.current,
+        bubble: bubbleRef.current
       }));
 
       useLayoutEffect(() => {
-        if (initialItem) doUpdate(initialItem);
-      }, []);
+        if (currentItemRef.current) doUpdate(currentItemRef.current);
+      }, [slotCount]);
 
       return (
         <div ref={containerRef} className={`message-row-container ${className || ""}`}>
-          <div 
-            ref={sparkRef} 
-            className="ai-message-prefix" 
-            style={{ display: initialItem?.role === "assistant" ? "flex" : "none" }}
-          >
-            <GeminiSparkle isLoading={initialItem?.metadata?.isLoading} />
+          <div ref={sparkRef} className="ai-message-prefix">
+            <GeminiSparkle />
             <div ref={dotsRef} className="gemini-typing-dots" style={{ display: "none" }}>
               <span></span>
               <span></span>
               <span></span>
             </div>
           </div>
+
           <div className="message-bubble-wrapper">
             <div className="message-bubble-content-row" style={{ position: 'relative' }}>
               <div ref={editRef} style={{ display: "none" }}>
@@ -219,16 +221,15 @@ export const UniversalChatRow = memo(
                 ref={bubbleRef}
                 className={`universal-chat-row ${isExpanded ? 'expanded' : ''} ${isLong ? 'is-long' : ''}`}
               >
-                <VirtualChatText ref={textRef} className="chat-content-text" />
-                <VirtualChatCode ref={codeRef} className="chat-content-code" />
-                <VirtualChatImage ref={imageRef} className="chat-content-image" />
+                {Array.from({ length: slotCount }).map((_, i) => (
+                  <UniversalPartSlot key={i} ref={el => partRefs.current[i] = el} codeHighlighting={codeHighlighting} />
+                ))}
               </div>
 
               {isLong && (
                 <button 
                   className={`user-expand-btn ${isExpanded ? 'expanded' : ''}`}
                   onClick={() => setIsExpanded(!isExpanded)}
-                  title={isExpanded ? "Collapse" : "Expand text"}
                 >
                   <ChevronIcon />
                 </button>

@@ -68,6 +68,8 @@ export interface ReactVirtualChatbotProps<T> {
   initialScrollIndex?: number;
   /** Optional custom component to render as the 'Thinking' indicator */
   renderTypingIndicator?: () => React.ReactNode;
+  /** Whether to enable syntax highlighting for code blocks. Default: false */
+  codeHighlighting?: boolean;
 }
 
 export interface ReactVirtualChatbotHandle<T = any> {

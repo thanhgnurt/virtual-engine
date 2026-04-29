@@ -254,14 +254,6 @@ const ReactVirtualChatbotInner = <T,>(
           if (slot) {
             slot.updateText(content);
             syncHeight(idx, s);
-            const el = containerRef.current;
-            if (followOutput && isAtBottomRef.current && el) {
-              const targetST = Math.max(
-                0,
-                engineRef.current.getTotalHeight() - el.clientHeight,
-              );
-              el.scrollTop = targetST;
-            }
           }
           break;
         }
