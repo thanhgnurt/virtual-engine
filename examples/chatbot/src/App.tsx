@@ -148,11 +148,19 @@ function App() {
       ];
     }
 
+    let minHeight: string | null = null;
+    if (chatbot?.element) {
+        // We want the AI response to be tall enough to fill the screen
+        // Subtracting about 150px for header/input and a typical user message
+        const viewH = chatbot.element.clientHeight;
+        minHeight = `${Math.max(300, viewH - 180)}px`;
+    }
+
     const aiMsg: ChatMessage = { 
       id: `a-${Date.now()}`, 
       role: "assistant", 
       content: "", 
-      metadata: { isLoading: true } 
+      metadata: { isLoading: true, minHeight } 
     };
 
     chatbot.appendItems([userMsg, aiMsg], false);

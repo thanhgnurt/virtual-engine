@@ -108,7 +108,12 @@ export const UniversalChatRow = memo(
         if (editRef.current) editRef.current.style.display = role === "user" ? "flex" : "none";
         
         const isLoading = item.metadata?.isLoading === true;
+        const minHeight = item.metadata?.minHeight;
         const content = item.content || "";
+
+        if (containerRef.current) {
+           containerRef.current.style.minHeight = minHeight ? (typeof minHeight === 'number' ? `${minHeight}px` : minHeight) : "0px";
+        }
         
         // --- 1. Content Parsing ---
         const finalParts: any[] = [];
