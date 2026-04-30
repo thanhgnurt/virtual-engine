@@ -1,6 +1,6 @@
-import React, { useCallback, useEffect, useLayoutEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useRef } from "react";
 
-export type TickSource = 'raf' | 'interval';
+export type TickSource = "raf" | "interval";
 export interface TickContext {
   source: TickSource;
   now: number;
@@ -55,10 +55,10 @@ export class RAFEngine {
 
     for (let i = 0; i < 32; i++) {
       this.contextPool.push({
-        source: 'raf',
+        source: "raf",
         now: 0,
         delta: 0,
-        hiddenTimestamp: null
+        hiddenTimestamp: null,
       });
     }
   }
@@ -72,9 +72,9 @@ export class RAFEngine {
 
   private setupVisibilityListener() {
     if (this.hasVisibilityListener) return;
-    if (typeof document === 'undefined') return;
+    if (typeof document === "undefined") return;
 
-    document.addEventListener('visibilitychange', this.handleVisibilityChange);
+    document.addEventListener("visibilitychange", this.handleVisibilityChange);
     this.hasVisibilityListener = true;
   }
 
@@ -107,7 +107,7 @@ export class RAFEngine {
     try {
       tick.actionRef.current(ctx);
     } catch (e) {
-      console.error('[RAFEngine] Error in tick action:', e);
+      console.error("[RAFEngine] Error in tick action:", e);
     }
   }
 
@@ -116,8 +116,8 @@ export class RAFEngine {
     this.isProcessing = true;
 
     const now = performance.now();
-    const source: TickSource = this.rafId !== null ? 'raf' : 'interval';
-    const isInterval = source === 'interval';
+    const source: TickSource = this.rafId !== null ? "raf" : "interval";
+    const isInterval = source === "interval";
     const globalHidden = this.hiddenTimestamp;
 
     let hasDeferredRemovals = false;
@@ -271,7 +271,7 @@ export class RAFEngine {
     if (this.tickActions.length === 0) return;
     if (this.activeTickCount === 0) return;
 
-    if (typeof document !== 'undefined' && document.hidden) {
+    if (typeof document !== "undefined" && document.hidden) {
       this.intervalId = setInterval(this.processTicks, 200);
     } else {
       this.rafId = requestAnimationFrame(this.rafLoop);
@@ -281,13 +281,13 @@ export class RAFEngine {
   addTick(
     tick: Omit<
       TickFn,
-      'id' | 'paused' | 'hiddenTimestamp' | 'shouldClearHiddenData'
-    >
+      "id" | "paused" | "hiddenTimestamp" | "shouldClearHiddenData"
+    >,
   ): TickFn {
     const index = this.tickActions.length;
     if (index >= this.TICK_MAX) {
       throw new Error(
-        `[RAFEngine] Maximum tick limit (${this.TICK_MAX}) reached`
+        `[RAFEngine] Maximum tick limit (${this.TICK_MAX}) reached`,
       );
     }
 
@@ -296,7 +296,7 @@ export class RAFEngine {
       id: this.tickIdCounter++,
       paused: false,
       hiddenTimestamp: null,
-      shouldClearHiddenData: false
+      shouldClearHiddenData: false,
     };
 
     this.tickActions.push(tickWithId);
@@ -390,7 +390,6 @@ export class RAFEngine {
   }
 
   forceStop() {
-    console.log('[RAFEngine] Force stopping all loops');
     this.stopEngine();
   }
 
@@ -415,15 +414,15 @@ export class RAFEngine {
       isRunning: this.rafId !== null || this.intervalId !== null,
       mode:
         this.rafId !== null
-          ? 'RAF'
+          ? "RAF"
           : this.intervalId !== null
-            ? 'interval'
-            : 'stopped'
+            ? "interval"
+            : "stopped",
     };
   }
 
   debugTicks() {
-    console.log('\n📊 RAFEngine Debug Info:');
+    console.log("\n📊 RAFEngine Debug Info:");
     console.log(`Total ticks: ${this.tickActions.length}`);
     console.log(`Active count: ${this.activeTickCount}`);
     console.log(`Index map size: ${this.tickIndexMap.size}`);
@@ -432,7 +431,7 @@ export class RAFEngine {
       console.log(`  Tick #${tick.id} (index ${index}):`, {
         flags: this.flagsPool[index],
         intervalTime: this.intervalTimePool[index],
-        indexMapMatch: this.tickIndexMap.get(tick.id) === index
+        indexMapMatch: this.tickIndexMap.get(tick.id) === index,
       });
     });
   }
@@ -440,7 +439,7 @@ export class RAFEngine {
 
 export const useRequestAnimation = (
   { intervalTime }: { intervalTime: number },
-  triggerAction: (ctx: TickContext) => void
+  triggerAction: (ctx: TickContext) => void,
 ) => {
   const savedAction = useRef(triggerAction);
   const tickRef = useRef<TickFn | null>(null);
@@ -455,7 +454,7 @@ export const useRequestAnimation = (
     const tick = engine.addTick({
       actionRef: savedAction,
       intervalTime,
-      lastFlush: performance.now()
+      lastFlush: performance.now(),
     });
     tickRef.current = tick;
     return () => {
@@ -499,7 +498,7 @@ export const useRequestAnimation = (
 
 export const useRAFEngineStats = () => {
   const [stats, setStats] = React.useState(() =>
-    RAFEngine.getInstance().getStats()
+    RAFEngine.getInstance().getStats(),
   );
 
   useEffect(() => {

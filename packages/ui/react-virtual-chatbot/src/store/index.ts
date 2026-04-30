@@ -6,6 +6,7 @@ import { WorkerModule } from "./modules/infra/WorkerModule";
 import { ComponentRegistryModule } from "./modules/ui/ComponentRegistryModule";
 import { ContentRegistryModule } from "./modules/ui/ContentRegistryModule";
 import { LayoutModule } from "./modules/ui/LayoutModule";
+import { ResizeModule } from "./modules/ui/ResizeModule";
 import { RowRegistryModule } from "./modules/ui/RowRegistryModule";
 import { SyncModule } from "./modules/ui/SyncModule";
 import { VirtualModule } from "./modules/ui/VirtualModule";
@@ -31,6 +32,7 @@ export class ChatStore extends BaseStore<ChatState, ChatEvent> {
   public syncModule!: SyncModule;
   public layoutModule!: LayoutModule;
   public virtualModule!: VirtualModule;
+  public resizeModule!: ResizeModule;
 
   constructor(options: ChatStoreOptions = {}) {
     const defaultState: ChatState = {
@@ -43,7 +45,6 @@ export class ChatStore extends BaseStore<ChatState, ChatEvent> {
     };
 
     super(defaultState);
-    console.log(`[ChatStore] Constructor: ${defaultState.history?.length || 0} initial messages.`);
 
     this._initModules(options);
   }
@@ -69,6 +70,7 @@ export class ChatStore extends BaseStore<ChatState, ChatEvent> {
     this.syncModule = this.registerModule(new SyncModule());
     this.layoutModule = this.registerModule(new LayoutModule());
     this.virtualModule = this.registerModule(new VirtualModule());
+    this.resizeModule = this.registerModule(new ResizeModule());
   }
 
   /**

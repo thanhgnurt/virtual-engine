@@ -1,6 +1,6 @@
-import { BaseModule } from '../../core/BaseModule';
-import { ChatEvent, ChatState } from '../../types';
-import { ChatMessage } from '../../../types';
+import { ChatMessage } from "../../../types";
+import { BaseModule } from "../../core/BaseModule";
+import { ChatEvent, ChatState } from "../../types";
 
 /**
  * Manages the message history and core data storage.
@@ -12,10 +12,14 @@ export class HistoryModule extends BaseModule<any, ChatEvent> {
     return this.store.state;
   }
 
-  public override onNotify(event: ChatEvent, id?: string | number, payload?: any): void {
-    if (event === ChatEvent.MESSAGE_UPDATED && typeof id === 'number') {
+  public override onNotify(
+    event: ChatEvent,
+    id?: string | number,
+    payload?: any,
+  ): void {
+    if (event === ChatEvent.MESSAGE_UPDATED && typeof id === "number") {
       const item = this._state.history[id];
-      if (item && typeof payload === 'string') {
+      if (item && typeof payload === "string") {
         // Accumulate text in history state (for React sync)
         if (item.parts && item.parts[0]) {
           item.parts[0].content += payload;
@@ -27,7 +31,6 @@ export class HistoryModule extends BaseModule<any, ChatEvent> {
   }
 
   public appendMessages(messages: ChatMessage[]): void {
-    console.log(`[HistoryModule] appendMessages: adding ${messages.length} messages. New total: ${this._state.history.length + messages.length}`);
     this._state.history = [...this._state.history, ...messages];
     this.store.emit(ChatEvent.HISTORY_CHANGED);
   }
@@ -42,7 +45,6 @@ export class HistoryModule extends BaseModule<any, ChatEvent> {
   }
 
   public setHistory(history: ChatMessage[]): void {
-    console.log(`[HistoryModule] setHistory: ${history.length} messages.`);
     this._state.history = history;
     this.store.emit(ChatEvent.HISTORY_CHANGED);
   }
