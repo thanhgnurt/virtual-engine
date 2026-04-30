@@ -13,8 +13,25 @@ export class ScrollModule extends BaseModule<any, ChatEvent> {
   private el: HTMLElement | null = null;
   
   public isAtBottom: boolean = false;
+  private bottomBuffer: number = 0;
 
-  public init(el: HTMLElement | null) {
+  /**
+   * Sets a fixed buffer at the bottom of the content (e.g. to avoid being covered by input).
+   */
+  public setBottomBuffer(h: number) {
+    this.bottomBuffer = h;
+    this.updateContentHeight();
+  }
+
+  private updateContentHeight() {
+    const content = this.store.dom.getContent();
+    const currentEngine = this.store.virtualModule.getEngine();
+    if (content && currentEngine) {
+      content.style.height = `${currentEngine.getTotalHeight() + this.bottomBuffer}px`;
+    }
+  }
+
+  public init(el: HTMLElement | null, initialScrollIndex?: number) {
     if (this.el) {
       this.el.removeEventListener("scroll", this.handleScroll);
     }
@@ -22,6 +39,20 @@ export class ScrollModule extends BaseModule<any, ChatEvent> {
     this.el = el;
     if (this.el) {
       this.el.addEventListener("scroll", this.handleScroll, { passive: true });
+      
+      // Auto-sync content height when engine updates
+      this.store.subscribe(ChatEvent.HISTORY_CHANGED, () => this.updateContentHeight());
+      this.store.subscribe(ChatEvent.RANGE_CHANGED, () => this.updateContentHeight());
+
+      // Handle initial scroll if requested
+      if (initialScrollIndex !== undefined) {
+        const currentEngine = this.store.virtualModule.getEngine();
+        if (currentEngine) {
+          const offset = currentEngine.getOffset(initialScrollIndex);
+          this.el.scrollTop = offset;
+          this.store.virtualModule.handleScroll(offset);
+        }
+      }
     }
   }
 

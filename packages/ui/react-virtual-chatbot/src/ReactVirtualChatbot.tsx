@@ -143,16 +143,13 @@ const ReactVirtualChatbotInner = (
 
   // 2. DOM Refs
   const containerRef = useRef<HTMLDivElement>(null);
-  const contentRef = useRef<HTMLDivElement>(null);
-  const bufferHeightRef = useRef(0);
-  const viewHRef = useRef(600);
 
   // 2. Initialize VirtualModule
   useEffect(() => {
     store.virtualModule.initEngine({
       totalCount: store.state.history.length,
       estimatedItemHeight: rowH,
-      viewportHeight: viewHRef.current,
+      viewportHeight: 600, // Initial guess, ResizeModule will correct it
       buffer: bufferRow,
     });
   }, [store, rowH, bufferRow]);
@@ -251,13 +248,7 @@ const ReactVirtualChatbotInner = (
     return unsub;
   }, [store]);
 
-  useLayoutEffect(() => {
-    if (initialScrollIndex !== undefined && engine) {
-      const offset = engine.getOffset(initialScrollIndex);
-      if (containerRef.current) containerRef.current.scrollTop = offset;
-      store.virtualModule.handleScroll(offset);
-    }
-  }, []);
+
 
   // ─────────────────────────────────────────────
   // Imperative Handle
@@ -304,12 +295,7 @@ const ReactVirtualChatbotInner = (
         store.layoutModule.updateUI();
       }
     },
-    setBottomBuffer: (h) => {
-      bufferHeightRef.current = h;
-      const content = store.dom.getContent();
-      if (content && engine)
-        content.style.height = `${engine.getTotalHeight() + h}px`;
-    },
+    setBottomBuffer: (h) => store.scrollModule.setBottomBuffer(h),
     setTyping: (isVisible: boolean) => store.uiStatusModule.setTyping(isVisible),
   }));
 
@@ -357,7 +343,7 @@ const ReactVirtualChatbotInner = (
           containerRef.current = r;
           store.dom.registerContainer(r);
           store.resizeModule.initContainer(r);
-          store.scrollModule.init(r);
+          store.scrollModule.init(r, initialScrollIndex);
         }}
         className={className}
         style={{
@@ -370,11 +356,10 @@ const ReactVirtualChatbotInner = (
       >
         <div
           ref={(r) => {
-            contentRef.current = r;
             store.dom.registerContent(r);
           }}
           style={{
-            height: (engine?.getTotalHeight() || 0) + bufferHeightRef.current,
+            height: 0, // Will be managed imperatively by ScrollModule
             width: "100%",
             position: "relative",
           }}
