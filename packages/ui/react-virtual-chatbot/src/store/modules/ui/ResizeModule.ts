@@ -27,12 +27,18 @@ export class ResizeModule extends BaseModule<any, ChatEvent> {
 
     if (el) {
       const obs = new ResizeObserver((entries) => {
-        const entry = entries[0];
-        if (!entry) return;
-        
-        // Use borderBoxSize if available for better precision and less layout thrashing
-        const height = entry.borderBoxSize?.[0]?.blockSize ?? entry.contentRect.height;
-        this.store.emit(ChatEvent.ITEM_HEIGHT_CHANGED, undefined, { slotIndex, height });
+        for (const entry of entries) {
+          const height = entry.borderBoxSize?.[0]?.blockSize ?? entry.contentRect.height;
+          
+          const node = entry.target as HTMLElement;
+          const rowEl = node.querySelector('[data-row-index]') || node;
+          const indexStr = rowEl.getAttribute("data-row-index");
+          
+          if (indexStr) {
+            const index = parseInt(indexStr, 10);
+            this.store.emit(ChatEvent.ITEM_HEIGHT_CHANGED, undefined, { index, slotIndex, height });
+          }
+        }
       });
       obs.observe(el);
       this.observers.set(slotIndex, obs);

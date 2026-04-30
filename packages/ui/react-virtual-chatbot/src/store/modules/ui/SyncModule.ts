@@ -69,9 +69,7 @@ export class SyncModule extends BaseModule<ChatStore, ChatEvent> {
         }
       }
 
-      if (this.store.layoutModule) {
-        this.store.layoutModule.syncHeight(index);
-      }
+
     });
 
     this.updateBuffer = remaining;

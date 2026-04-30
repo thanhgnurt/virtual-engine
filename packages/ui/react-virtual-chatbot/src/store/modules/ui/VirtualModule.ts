@@ -35,7 +35,25 @@ export class VirtualModule extends BaseModule<ChatStore, ChatEvent> {
 
   public updateTotalCount(count: number) {
     if (this.engine) {
+      // 1. Backup all previously measured heights
+      // We assume the engine might reset them to estimatedItemHeight internally
+      const backupHeights = new Map<number, number>();
+      for (let i = 0; i < count; i++) {
+        const h = this.engine.getHeight(i);
+        if (h > 0) backupHeights.set(i, h);
+      }
+
       this.engine.updateOptions({ totalCount: count });
+
+      // 2. Restore heights to prevent overlaps
+      let changed = false;
+      backupHeights.forEach((h, i) => {
+        if (this.engine!.getHeight(i) !== h) {
+          this.engine!.setHeight(i, h);
+          changed = true;
+        }
+      });
+
       this.refreshRange();
     }
   }
@@ -67,7 +85,7 @@ export class VirtualModule extends BaseModule<ChatStore, ChatEvent> {
     }
   }
 
-  private refreshRange() {
+  public refreshRange() {
     if (!this.engine) return;
     const next = this.engine.computeRange(this.lastScrollTop, 5);
     this.range = { start: next.start, end: next.end };
