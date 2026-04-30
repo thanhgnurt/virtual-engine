@@ -282,7 +282,7 @@ const ReactVirtualChatbotInner = (
   const recordAnchor = useCallback(() => {
     store.resizeModule.setAnchoring(true);
     isAnchoringRef.current = true;
-    const container = containerRef.current;
+    const container = store.dom.getContainer();
     const currentEngine = store.virtualModule.getEngine();
     if (!container || !currentEngine) return;
     const st = container.scrollTop;
@@ -296,7 +296,7 @@ const ReactVirtualChatbotInner = (
   }, [store]);
 
   const applyAnchor = useCallback(() => {
-    const container = containerRef.current;
+    const container = store.dom.getContainer();
     const { index, offset } = anchorRef.current;
     const currentEngine = store.virtualModule.getEngine();
     
@@ -362,7 +362,7 @@ const ReactVirtualChatbotInner = (
       }
 
       // Update total container height
-      const content = contentRef.current;
+      const content = store.dom.getContent();
       if (content) {
         content.style.height = `${currentEngine.getTotalHeight()}px`;
       }
@@ -375,7 +375,7 @@ const ReactVirtualChatbotInner = (
   const syncHeight = useCallback(
     (index: number, slotIndex: number, height: number) => {
       const wrapper = store.dom.getWrapper(slotIndex);
-      const container = containerRef.current;
+      const container = store.dom.getContainer();
       const currentEngine = store.virtualModule.getEngine();
       if (!wrapper || index < 0 || !container || !currentEngine) return;
 
@@ -460,7 +460,8 @@ const ReactVirtualChatbotInner = (
           const currentEngine = store.virtualModule.getEngine();
           if (currentEngine) {
              const targetST = Math.max(0, currentEngine.getTotalHeight() - h);
-             containerRef.current!.scrollTop = targetST;
+             const container = store.dom.getContainer();
+             if (container) container.scrollTop = targetST;
              store.virtualModule.handleScroll(targetST);
           }
         }
@@ -494,7 +495,7 @@ const ReactVirtualChatbotInner = (
     if (!el) return;
     const onRafUpdate = () => {
       if (isAnchoringRef.current) return;
-      const el = containerRef.current;
+      const el = store.dom.getContainer();
       const currentEngine = store.virtualModule.getEngine();
       if (!el || !currentEngine) return;
 
@@ -580,7 +581,8 @@ const ReactVirtualChatbotInner = (
     scrollToIndex: (index: number) => {
       if (!engine) return;
       const offset = engine.getOffset(index);
-      if (containerRef.current) containerRef.current.scrollTop = offset;
+      const container = store.dom.getContainer();
+      if (container) container.scrollTop = offset;
       store.virtualModule.handleScroll(offset);
     },
     updateItemHeight: (index: number, height: number) => {
