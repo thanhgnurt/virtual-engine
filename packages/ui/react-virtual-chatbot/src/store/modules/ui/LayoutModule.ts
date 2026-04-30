@@ -124,7 +124,7 @@ export class LayoutModule extends BaseModule<ChatStore, ChatEvent> {
         this.lastIds[s] !== item || this.lastIndices[s] !== i;
       const isVisChanged = this.lastVis[s] !== (isVisible ? 1 : 0);
       let top = isOutOfRange ? -9999 : currentEngine.getOffset(i);
-      
+
       // Poison control: if top is NaN, fallback to -9999 to avoid CSS breakage
       if (isNaN(top)) {
         top = -9999;
@@ -160,14 +160,13 @@ export class LayoutModule extends BaseModule<ChatStore, ChatEvent> {
 
   public syncHeightReal(
     index: number,
-    slotIndex: number,
+    slotIndex: number | undefined,
     height: number,
   ): boolean {
-    const wrapper = this.store.dom.getWrapper(slotIndex);
     const container = this.store.dom.getContainer();
     const currentEngine = this.store.virtualModule.getEngine();
 
-    if (!wrapper || index < 0 || !container || !currentEngine) return false;
+    if (index < 0 || !container || !currentEngine) return false;
     if (height <= 0) return false;
 
     const oldH = currentEngine.getHeight(index);

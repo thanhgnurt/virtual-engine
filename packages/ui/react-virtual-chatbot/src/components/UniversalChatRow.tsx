@@ -9,6 +9,7 @@ import {
   useState,
 } from "react";
 import { useChatStore } from "../store/ChatContext";
+import { ChatEvent } from "../store/types";
 import {
   ChatMessage,
   ISubContentHandle,
@@ -284,6 +285,21 @@ export const UniversalChatRow = memo(
 
         // CRITICAL: Set data-index ONLY when fully rendered to avoid ResizeObserver race conditions!
         containerRef.current.setAttribute("data-row-index", index.toString());
+
+        // FORCE MEASUREMENT: ResizeObserver ignores changes if a recycled slot happens to have the same height.
+        // We must manually measure and report after rendering to guarantee the engine gets the true height.
+        requestAnimationFrame(() => {
+          if (containerRef.current) {
+            const currentIdx = parseInt(
+              containerRef.current.getAttribute("data-row-index") || "-1",
+              10
+            );
+            if (currentIdx === index) {
+              const h = containerRef.current.offsetHeight;
+              store.emit(ChatEvent.ITEM_HEIGHT_CHANGED, undefined, { index, height: h });
+            }
+          }
+        });
       }
     };
 
