@@ -83,8 +83,8 @@ const DefaultChatRenderer = (
 // Main Component
 // ─────────────────────────────────────────────
 
-const MAX_POOL = 256;
-const POOL_OVERHEAD = 30;
+const MAX_POOL = 40;
+const POOL_OVERHEAD = 10;
 
 /**
  * Extended Props for the "Black Box" Chatbot
@@ -366,7 +366,6 @@ const ReactVirtualChatbotInner = (
           const slotHandle = refsRef.current[s];
           if (slotHandle && (isContentChanged || isVisChanged)) {
             slotHandle.update(item, i, wrapper, isVisible);
-            if (isVisible) syncHeight(i, s);
           }
         }
       }
@@ -577,6 +576,14 @@ const ReactVirtualChatbotInner = (
           key={s}
           ref={(r) => {
             wrapperRefs.current[s] = r;
+            if (r) {
+               // Use ResizeObserver for async height updates
+               const obs = new ResizeObserver(() => {
+                 const idx = lastIndicesRef.current[s];
+                 if (idx >= 0) syncHeight(idx, s);
+               });
+               obs.observe(r);
+            }
           }}
           style={{
             position: "absolute",
@@ -585,6 +592,7 @@ const ReactVirtualChatbotInner = (
             width: "100%",
             transform: `translateY(-9999px)`,
             visibility: "hidden",
+            contain: "content"
           }}
         >
           <EngineSlot
