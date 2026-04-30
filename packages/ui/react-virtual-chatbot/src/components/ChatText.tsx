@@ -9,7 +9,7 @@ const md = new MarkdownIt({
   typographer: true,
 });
 
-export const VirtualChatText = memo(
+export const ChatText = memo(
   forwardRef<ISubContentHandle, { className?: string }>(({ className }, ref) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const contentRef = useRef<string>("");
@@ -86,4 +86,4 @@ export const VirtualChatText = memo(
   }),
 );
 
-VirtualChatText.displayName = "VirtualChatText";
+ChatText.displayName = "ChatText";

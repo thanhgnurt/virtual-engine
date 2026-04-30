@@ -1,10 +1,10 @@
 import "./index.css";
 export * from "./types";
-export { VirtualChatText } from "./components/VirtualChatText";
-export { VirtualChatCode } from "./components/VirtualChatCode";
-export { VirtualChatImage } from "./components/VirtualChatImage";
+export { ChatText } from "./components/ChatText";
+export { ChatCode } from "./components/ChatCode";
+export { ChatImage } from "./components/ChatImage";
 export { ChatInput, type ChatInputHandle } from "./components/ChatInput";
-export { GeminiSparkle, type GeminiSparkleProps } from "./components/GeminiSparkle";
+export { Sparkle, type SparkleProps } from "./components/Sparkle";
 export { ChatRow } from "./components/ChatRow";
 export { ReactVirtualChatbot } from "./ReactVirtualChatbot";
 export * from "./store";

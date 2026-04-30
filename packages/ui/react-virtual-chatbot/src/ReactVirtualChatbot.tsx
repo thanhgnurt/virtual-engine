@@ -7,7 +7,7 @@ import React, {
   useRef,
   useState,
 } from "react";
-import { DefaultChatRenderer } from "./components/DefaultChatRenderer";
+import { ChatRenderer } from "./components/ChatRenderer";
 import { EngineSlot } from "./components/EngineSlot";
 import { TypingIndicator } from "./components/TypingIndicator";
 import { ChatStore, DEFAULT_POOL_SIZE } from "./store";
@@ -213,7 +213,7 @@ const ReactVirtualChatbotInner = (
             initialData={null}
             renderItem={(item: ChatMessage | null, index: number) => {
               if (renderItem) return renderItem(item as any, index);
-              return DefaultChatRenderer(item, index, codeHighlighting);
+              return ChatRenderer(item, index, codeHighlighting);
             }}
           />
         </div>,

@@ -1,18 +1,8 @@
 import { ChatMessage } from "../types";
-import { GeminiSparkle } from "./GeminiSparkle";
 import { ChatRow } from "./ChatRow";
+import { Sparkle } from "./Sparkle";
 
-interface DefaultChatRendererProps {
-  item: ChatMessage | null;
-  index: number;
-  codeHighlighting?: boolean;
-}
-
-/**
- * The default UI renderer for chat messages.
- * Handles assistant vs user roles and standard decoration like sparkles.
- */
-export const DefaultChatRenderer = (
+export const ChatRenderer = (
   item: ChatMessage | null,
   index: number,
   codeHighlighting?: boolean,
@@ -21,7 +11,7 @@ export const DefaultChatRenderer = (
     return (
       <div key={item.id} className="assistant-message-wrapper">
         <div className="ai-message-prefix">
-          <GeminiSparkle isLoading={item.metadata?.isLoading} />
+          <Sparkle isLoading={item.metadata?.isLoading} />
         </div>
         <ChatRow item={item} codeHighlighting={codeHighlighting} />
       </div>

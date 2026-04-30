@@ -1,5 +1,5 @@
 import { forwardRef, useImperativeHandle, useRef } from "react";
-import { GeminiSparkle } from "./GeminiSparkle";
+import { Sparkle } from "./Sparkle";
 
 export interface AIPrefixHandle {
   setDotsVisible: (visible: boolean) => void;
@@ -32,7 +32,7 @@ export const AIPrefix = forwardRef<AIPrefixHandle, {}>((_, ref) => {
 
   return (
     <div ref={containerRef} className="ai-message-prefix">
-      <GeminiSparkle />
+      <Sparkle />
       <div
         ref={dotsRef}
         className="gemini-typing-dots"

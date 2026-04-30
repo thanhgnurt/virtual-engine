@@ -1,7 +1,7 @@
 import React, { forwardRef, memo, useImperativeHandle, useRef } from "react";
 import { ISubContentHandle } from "../types";
 
-export const VirtualChatImage = memo(
+export const ChatImage = memo(
   forwardRef<ISubContentHandle, { className?: string }>(({ className }, ref) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const imgRef = useRef<HTMLImageElement>(null);
@@ -85,4 +85,4 @@ export const VirtualChatImage = memo(
   }),
 );
 
-VirtualChatImage.displayName = "VirtualChatImage";
+ChatImage.displayName = "ChatImage";

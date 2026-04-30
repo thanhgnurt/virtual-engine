@@ -1,12 +1,14 @@
 import React, { useEffect, useRef } from "react";
 import { useChatStore } from "../store/ChatContext";
-import { GeminiSparkle } from "./GeminiSparkle";
+import { Sparkle } from "./Sparkle";
 
 interface TypingIndicatorProps {
   renderCustom?: () => React.ReactNode;
 }
 
-export const TypingIndicator: React.FC<TypingIndicatorProps> = ({ renderCustom }) => {
+export const TypingIndicator: React.FC<TypingIndicatorProps> = ({
+  renderCustom,
+}) => {
   const store = useChatStore();
   const ref = useRef<HTMLDivElement>(null);
 
@@ -37,7 +39,7 @@ export const TypingIndicator: React.FC<TypingIndicatorProps> = ({ renderCustom }
           renderCustom()
         ) : (
           <div className="ai-message-prefix">
-            <GeminiSparkle isLoading={true} />
+            <Sparkle isLoading={true} />
             <div className="gemini-typing-dots">
               <span></span>
               <span></span>

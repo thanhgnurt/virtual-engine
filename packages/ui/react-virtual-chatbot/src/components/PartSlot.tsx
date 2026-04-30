@@ -1,13 +1,13 @@
 import { forwardRef, memo, useImperativeHandle, useRef } from "react";
 import { ISubContentHandle } from "../types";
-import { VirtualChatCode } from "./VirtualChatCode";
-import { VirtualChatImage } from "./VirtualChatImage";
-import { VirtualChatText } from "./VirtualChatText";
+import { ChatCode } from "./ChatCode";
+import { ChatImage } from "./ChatImage";
+import { ChatText } from "./ChatText";
 
 /**
  * A dynamic slot that can render Text, Code, or Image.
  */
-export const UniversalPartSlot = memo(
+export const PartSlot = memo(
   forwardRef<
     ISubContentHandle,
     { className?: string; codeHighlighting?: boolean }
@@ -46,12 +46,14 @@ export const UniversalPartSlot = memo(
     }));
 
     return (
-      <div className="universal-part-slot" ref={containerRef}>
-        <VirtualChatText ref={textRef} />
-        <VirtualChatCode ref={codeRef} codeHighlighting={codeHighlighting} />
-        <VirtualChatImage ref={imageRef} />
+      <div className="part-slot" ref={containerRef}>
+        <ChatText ref={textRef} />
+        <ChatCode ref={codeRef} codeHighlighting={codeHighlighting} />
+        <ChatImage ref={imageRef} />
       </div>
     );
   }),
   () => true,
 );
+
+PartSlot.displayName = "PartSlot";

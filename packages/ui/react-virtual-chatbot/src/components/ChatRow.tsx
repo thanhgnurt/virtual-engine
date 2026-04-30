@@ -17,7 +17,7 @@ import {
 } from "../types";
 import { AIPrefix, AIPrefixHandle } from "./AIPrefix";
 import { ChevronIcon, UserEditIcon } from "./Icons";
-import { UniversalPartSlot } from "./UniversalPartSlot";
+import { PartSlot } from "./PartSlot";
 
 export const ChatRow = memo(
   forwardRef<
@@ -271,7 +271,7 @@ export const ChatRow = memo(
               className={`universal-chat-row ${isExpanded ? "expanded" : ""} ${isLong ? "is-long" : ""}`}
             >
               {Array.from({ length: slotCount }).map((_, i) => (
-                <UniversalPartSlot
+                <PartSlot
                   key={i}
                   ref={(el) => (partRefs.current[i] = el)}
                   codeHighlighting={codeHighlighting}

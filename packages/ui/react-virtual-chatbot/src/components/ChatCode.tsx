@@ -9,7 +9,7 @@ const ICON_COPY = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" s
 const ICON_CHECK = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#28a745" strokeWidth="2"><path d="M20 6L9 17l-5-5" strokeLinecap="round" strokeLinejoin="round" /></svg>`;
 const ICON_DOWNLOAD = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></svg>`;
 
-export const VirtualChatCode = forwardRef<ISubContentHandle, { className?: string; codeHighlighting?: boolean }>(
+export const ChatCode = forwardRef<ISubContentHandle, { className?: string; codeHighlighting?: boolean }>(
   ({ className, codeHighlighting = false }, ref) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const codeRef = useRef<HTMLElement>(null);
@@ -151,4 +151,4 @@ export const VirtualChatCode = forwardRef<ISubContentHandle, { className?: strin
   }
 );
 
-VirtualChatCode.displayName = "VirtualChatCode";
+ChatCode.displayName = "ChatCode";
