@@ -5,20 +5,24 @@ import { PersistModule } from "./modules/data/PersistModule";
 import { WorkerModule } from "./modules/infra/WorkerModule";
 import { ComponentRegistryModule } from "./modules/ui/ComponentRegistryModule";
 import { ContentRegistryModule } from "./modules/ui/ContentRegistryModule";
-import { LayoutModule } from "./modules/ui/LayoutModule";
 import { DOMRegisterModule } from "./modules/ui/DOMRegisterModule";
+import { LayoutModule } from "./modules/ui/LayoutModule";
 import { ResizeModule } from "./modules/ui/ResizeModule";
-import { SyncModule } from "./modules/ui/SyncModule";
-import { VirtualModule } from "./modules/ui/VirtualModule";
 import { ScrollModule } from "./modules/ui/ScrollModule";
-import { UIStatusModule } from "./modules/ui/UIStatusModule";
 import { StreamModule } from "./modules/ui/StreamModule";
+import { SyncModule } from "./modules/ui/SyncModule";
+import { UIStatusModule } from "./modules/ui/UIStatusModule";
+import { VirtualModule } from "./modules/ui/VirtualModule";
 import { ChatEvent, ChatState } from "./types";
+
+/** Single source of truth for the physical DOM slot pool size. */
+export const DEFAULT_POOL_SIZE = 16;
 
 export interface ChatStoreOptions {
   worker?: Worker;
   fallbackFetcher?: IChatFetcher;
   initialState?: Partial<ChatState>;
+  poolSize?: number;
 }
 
 /**
@@ -40,6 +44,9 @@ export class ChatStore extends BaseStore<ChatState, ChatEvent> {
   public uiStatusModule!: UIStatusModule;
   public streamModule!: StreamModule;
 
+  /** Number of physical DOM slots. Must stay in sync with the React pool. */
+  public poolSize: number = DEFAULT_POOL_SIZE;
+
   constructor(options: ChatStoreOptions = {}) {
     const defaultState: ChatState = {
       history: [],
@@ -51,6 +58,7 @@ export class ChatStore extends BaseStore<ChatState, ChatEvent> {
 
     super(defaultState);
 
+    this.poolSize = options.poolSize ?? DEFAULT_POOL_SIZE;
     this._initModules(options);
   }
 
@@ -124,8 +132,6 @@ export class ChatStore extends BaseStore<ChatState, ChatEvent> {
       this.uiStatusModule.setTyping(false);
     }
   }
-
-
 
   /**
    * Updates the selected model

@@ -2,8 +2,7 @@ import { BaseModule } from "../../core/BaseModule";
 import { ChatStore } from "../../index";
 import { ChatEvent } from "../../types";
 
-const MAX_POOL = 40;
-const POOL_OVERHEAD = 10;
+
 
 /**
  * The unified Layout and Positioning Engine.
@@ -21,11 +20,15 @@ export class LayoutModule extends BaseModule<ChatStore, ChatEvent> {
   private anchor = { index: -1, offset: 0 };
   public isAnchoring: boolean = false;
 
+  private get MAX_POOL() {
+    return this.store.poolSize;
+  }
+
   // Virtual DOM mapping states
-  private lastIds: (unknown | null)[] = new Array(MAX_POOL).fill(null);
-  private lastIndices: Int32Array = new Int32Array(MAX_POOL).fill(-2);
-  private lastVis: Uint8Array = new Uint8Array(MAX_POOL).fill(0);
-  private lastOffsets: Float64Array = new Float64Array(MAX_POOL).fill(-1);
+  private lastIds: (unknown | null)[] = new Array(128).fill(null);
+  private lastIndices: Int32Array = new Int32Array(128).fill(-2);
+  private lastVis: Uint8Array = new Uint8Array(128).fill(0);
+  private lastOffsets: Float64Array = new Float64Array(128).fill(-1);
 
   public calculateAndApplyMinHeight(index: number): void {
     const viewH = window.innerHeight;
@@ -111,12 +114,12 @@ export class LayoutModule extends BaseModule<ChatStore, ChatEvent> {
     const range = this.store.virtualModule.getRange();
 
     // Always manage all MAX_POOL slots. Unused slots will be assigned -1 by the engine.
-    const slotMap = new Int32Array(MAX_POOL);
-    currentEngine.getSlotMap(range, MAX_POOL, slotMap);
+    const slotMap = new Int32Array(this.MAX_POOL);
+    currentEngine.getSlotMap(range, this.MAX_POOL, slotMap);
 
     const history = this.store.state.history;
 
-    for (let s = 0; s < MAX_POOL; s++) {
+    for (let s = 0; s < this.MAX_POOL; s++) {
       const i = slotMap[s];
       const isOutOfRange = i === -1;
       const item = isOutOfRange ? null : history[i];

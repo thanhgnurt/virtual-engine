@@ -67,8 +67,8 @@ export class StreamModule extends BaseModule<any, ChatEvent> {
 
     this.updateBuffer.forEach((content, idx) => {
       // Find which slot is currently displaying this message index
-      // We use the MAX_POOL from LayoutModule (usually 40)
-      for (let s = 0; s < 40; s++) {
+      // Find which slot is currently displaying this message index
+      for (let s = 0; s < this.store.poolSize; s++) {
         if (this.store.layoutModule.getIndexInSlot(s) === idx) {
           const slot = this.store.dom.getHandle(s);
           if (slot) {

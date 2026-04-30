@@ -10,7 +10,7 @@ import React, {
 import { DefaultChatRenderer } from "./components/DefaultChatRenderer";
 import { EngineSlot } from "./components/EngineSlot";
 import { TypingIndicator } from "./components/TypingIndicator";
-import { ChatStore } from "./store";
+import { ChatStore, DEFAULT_POOL_SIZE } from "./store";
 import { ChatProvider } from "./store/ChatContext";
 import { ChatEvent, ChatState } from "./store/types";
 import {
@@ -23,8 +23,6 @@ import {
 // Main Component
 // ─────────────────────────────────────────────
 
-const POOL_SIZE = 32;
-
 /**
  * Extended Props for the "Black Box" Chatbot
  */
@@ -36,6 +34,7 @@ export interface EnhancedChatbotProps extends Partial<
   selectedModelId?: string;
   onStateChange?: (state: ChatState) => void;
   history?: ChatMessage[];
+  poolSize?: number;
 }
 
 const ReactVirtualChatbotInner = (
@@ -57,6 +56,7 @@ const ReactVirtualChatbotInner = (
     selectedModelId,
     onStateChange,
     history: initialHistory,
+    poolSize = DEFAULT_POOL_SIZE,
   } = props;
 
   // 1. Store Initialization (The Heart of the Black Box)
@@ -65,6 +65,7 @@ const ReactVirtualChatbotInner = (
       new ChatStore({
         worker,
         fallbackFetcher,
+        poolSize,
         initialState: {
           selectedModelId,
           history: initialHistory || [],
@@ -186,7 +187,7 @@ const ReactVirtualChatbotInner = (
 
   const nodePool = useMemo(() => {
     const nodes = [];
-    for (let s = 0; s < POOL_SIZE; s++) {
+    for (let s = 0; s < poolSize; s++) {
       nodes.push(
         <div
           key={s}
