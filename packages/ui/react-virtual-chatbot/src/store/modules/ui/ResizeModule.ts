@@ -30,12 +30,8 @@ export class ResizeModule extends BaseModule<any, ChatEvent> {
         for (const entry of entries) {
           const height = entry.borderBoxSize?.[0]?.blockSize ?? entry.contentRect.height;
           
-          const node = entry.target as HTMLElement;
-          const rowEl = node.querySelector('[data-row-index]') || node;
-          const indexStr = rowEl.getAttribute("data-row-index");
-          
-          if (indexStr) {
-            const index = parseInt(indexStr, 10);
+          const index = this.store.layoutModule.getIndexInSlot(slotIndex);
+          if (index >= 0) {
             this.store.emit(ChatEvent.ITEM_HEIGHT_CHANGED, undefined, { index, slotIndex, height });
           }
         }
