@@ -12,6 +12,7 @@ import { SyncModule } from "./modules/ui/SyncModule";
 import { VirtualModule } from "./modules/ui/VirtualModule";
 import { ScrollModule } from "./modules/ui/ScrollModule";
 import { UIStatusModule } from "./modules/ui/UIStatusModule";
+import { StreamModule } from "./modules/ui/StreamModule";
 import { ChatEvent, ChatState } from "./types";
 
 export interface ChatStoreOptions {
@@ -37,6 +38,7 @@ export class ChatStore extends BaseStore<ChatState, ChatEvent> {
   public resizeModule!: ResizeModule;
   public scrollModule!: ScrollModule;
   public uiStatusModule!: UIStatusModule;
+  public streamModule!: StreamModule;
 
   constructor(options: ChatStoreOptions = {}) {
     const defaultState: ChatState = {
@@ -77,6 +79,7 @@ export class ChatStore extends BaseStore<ChatState, ChatEvent> {
     this.resizeModule = this.registerModule(new ResizeModule());
     this.scrollModule = this.registerModule(new ScrollModule());
     this.uiStatusModule = this.registerModule(new UIStatusModule());
+    this.streamModule = this.registerModule(new StreamModule());
   }
 
   /**
@@ -98,6 +101,7 @@ export class ChatStore extends BaseStore<ChatState, ChatEvent> {
 
     // 2. Prepare Layout & Scroll (Ensure it's visible)
     this.layoutModule.calculateAndApplyMinHeight(aiIdx);
+    this.uiStatusModule.setTyping(true);
     this.emit(ChatEvent.HISTORY_CHANGED); // Force one more update
 
     // 3. Start Streaming via Worker (or Fallback)
@@ -115,11 +119,11 @@ export class ChatStore extends BaseStore<ChatState, ChatEvent> {
       });
 
       // 4. Finalize
-      // Note: Full text sync for React happens when the stream finishes
-      // (This could be handled in a module listener for STREAM_STATE_CHANGED)
-    } catch (error) {
-      console.error("Chat Error:", error);
       this.historyModule.updateMessageMetadata(aiIdx, { isLoading: false });
+    } catch (error) {
+      this.historyModule.updateMessageMetadata(aiIdx, { isLoading: false });
+    } finally {
+      this.uiStatusModule.setTyping(false);
     }
   }
 

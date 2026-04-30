@@ -38,7 +38,13 @@ export class HistoryModule extends BaseModule<any, ChatEvent> {
   public updateMessageMetadata(index: number, metadata: any): void {
     const item = this._state.history[index];
     if (item) {
-      item.metadata = { ...item.metadata, ...metadata };
+      // Create a new reference to trigger change detection in LayoutModule
+      const newItem = {
+        ...item,
+        metadata: { ...item.metadata, ...metadata },
+      };
+      this._state.history[index] = newItem;
+      
       // Notify both as a general change and specifically for this index
       this.store.emit(ChatEvent.HISTORY_CHANGED, index);
     }

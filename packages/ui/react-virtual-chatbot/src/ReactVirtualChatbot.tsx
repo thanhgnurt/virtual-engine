@@ -19,7 +19,7 @@ import {
   ReactVirtualChatbotHandle,
   ReactVirtualChatbotProps,
 } from "./types";
-import { RAFEngine, TickContext, TickFn } from "./utils/useRequestAnimation";
+
 
 // ─────────────────────────────────────────────
 // Sub-components
@@ -201,52 +201,7 @@ const ReactVirtualChatbotInner = (
     };
   }, [store, engine, followOutput]);
 
-  // Streaming logic
-  const updateBufferRef = useRef<Map<number, string>>(new Map());
-  const rafTickRef = useRef<TickFn | null>(null);
-  const animationActionRef = useRef<(ctx: TickContext) => void>(() => {});
 
-  animationActionRef.current = () => {
-    const buffer = updateBufferRef.current;
-    if (buffer.size === 0) return;
-    buffer.forEach((content, idx) => {
-      for (let s = 0; s < POOL_SIZE; s++) {
-        if (store.layoutModule.getIndexInSlot(s) === idx) {
-          const slot = store.dom.getHandle(s);
-          if (slot) {
-            slot.updateText(content);
-          }
-          break;
-        }
-      }
-    });
-    buffer.clear();
-  };
-
-  useEffect(() => {
-    const unsub = store.subscribe(ChatEvent.MESSAGE_UPDATED, (id, payload) => {
-      if (typeof id === "number") {
-        const item = store.state.history[id];
-        if (item) {
-          const fullContent =
-            item.parts && item.parts[0]
-              ? item.parts[0].content
-              : item.content || "";
-
-          updateBufferRef.current.set(id, fullContent);
-
-          if (!rafTickRef.current) {
-            rafTickRef.current = RAFEngine.getInstance().addTick({
-              intervalTime: 0,
-              lastFlush: performance.now(),
-              actionRef: animationActionRef,
-            });
-          }
-        }
-      }
-    });
-    return unsub;
-  }, [store]);
 
 
 

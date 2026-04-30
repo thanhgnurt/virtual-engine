@@ -11,6 +11,7 @@ const POOL_OVERHEAD = 10;
  */
 export class LayoutModule extends BaseModule<ChatStore, ChatEvent> {
   public interests: ChatEvent[] = [
+    ChatEvent.HISTORY_CHANGED,
     ChatEvent.STREAM_STATE_CHANGED,
     ChatEvent.RANGE_CHANGED,
     ChatEvent.ITEM_HEIGHT_CHANGED,
@@ -199,7 +200,7 @@ export class LayoutModule extends BaseModule<ChatStore, ChatEvent> {
     id?: string | number,
     payload?: any,
   ): void {
-    if (event === ChatEvent.RANGE_CHANGED) {
+    if (event === ChatEvent.RANGE_CHANGED || event === ChatEvent.HISTORY_CHANGED) {
       this.updateUI();
     } else if (event === ChatEvent.ITEM_HEIGHT_CHANGED && payload) {
       const { index, slotIndex, height } = payload;
