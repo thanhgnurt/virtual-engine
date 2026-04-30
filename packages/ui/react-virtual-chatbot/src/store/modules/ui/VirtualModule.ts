@@ -14,6 +14,7 @@ export class VirtualModule extends BaseModule<ChatStore, ChatEvent> {
     viewportHeight: number;
     buffer: number;
   }) {
+    console.log(`[VirtualModule] initEngine: totalCount=${options.totalCount}`);
     this.engine = new VirtualChatbot(options);
     this.refreshRange();
   }

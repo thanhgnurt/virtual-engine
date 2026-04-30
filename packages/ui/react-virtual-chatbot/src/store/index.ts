@@ -43,6 +43,7 @@ export class ChatStore extends BaseStore<ChatState, ChatEvent> {
     };
 
     super(defaultState);
+    console.log(`[ChatStore] Constructor: ${defaultState.history?.length || 0} initial messages.`);
 
     this._initModules(options);
   }

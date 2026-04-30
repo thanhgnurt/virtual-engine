@@ -27,6 +27,7 @@ export class HistoryModule extends BaseModule<any, ChatEvent> {
   }
 
   public appendMessages(messages: ChatMessage[]): void {
+    console.log(`[HistoryModule] appendMessages: adding ${messages.length} messages. New total: ${this._state.history.length + messages.length}`);
     this._state.history = [...this._state.history, ...messages];
     this.store.emit(ChatEvent.HISTORY_CHANGED);
   }
@@ -41,6 +42,7 @@ export class HistoryModule extends BaseModule<any, ChatEvent> {
   }
 
   public setHistory(history: ChatMessage[]): void {
+    console.log(`[HistoryModule] setHistory: ${history.length} messages.`);
     this._state.history = history;
     this.store.emit(ChatEvent.HISTORY_CHANGED);
   }

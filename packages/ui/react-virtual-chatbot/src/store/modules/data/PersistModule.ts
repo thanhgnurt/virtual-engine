@@ -1,7 +1,7 @@
-import { BaseModule } from '../../core/BaseModule';
-import { ChatEvent, ChatState } from '../../types';
+import { BaseModule } from "../../core/BaseModule";
+import { ChatEvent } from "../../types";
 
-const STORAGE_KEY = 'react-virtual-chatbot-settings';
+const STORAGE_KEY = "react-virtual-chatbot-settings";
 
 /**
  * Handles persistent storage of chatbot settings (e.g., API Key, Selected Model).
@@ -30,12 +30,13 @@ export class PersistModule extends BaseModule<any, ChatEvent> {
         const parsed = JSON.parse(data);
         // Safely merge with current state
         if (parsed.apiKey) this.store.state.apiKey = parsed.apiKey;
-        if (parsed.selectedModelId) this.store.state.selectedModelId = parsed.selectedModelId;
-        
-        console.log("Chatbot Persist: Settings loaded", parsed);
+        if (parsed.selectedModelId)
+          this.store.state.selectedModelId = parsed.selectedModelId;
+
+        // console.log("Chatbot Persist: Settings loaded", parsed);
       }
     } catch (e) {
-      console.warn("Chatbot Persist: Failed to load settings", e);
+      // console.warn("Chatbot Persist: Failed to load settings", e);
     }
   }
 
@@ -49,9 +50,9 @@ export class PersistModule extends BaseModule<any, ChatEvent> {
         selectedModelId: this.store.state.selectedModelId,
       };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-      console.log("Chatbot Persist: Settings saved", data);
+      // console.log("Chatbot Persist: Settings saved", data);
     } catch (e) {
-      console.warn("Chatbot Persist: Failed to save settings", e);
+      // console.warn("Chatbot Persist: Failed to save settings", e);
     }
   }
 }

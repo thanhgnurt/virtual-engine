@@ -164,6 +164,9 @@ export const UniversalChatRow = memo(
           } else {
             finalParts.push({ type: "text", content });
           }
+        } else if (item.metadata?.url) {
+          finalParts.push({ type: "text", content });
+          finalParts.push({ type: "image", content: item.metadata.url, metadata: { aspectRatio: item.metadata.aspectRatio } });
         } else if (content) {
           finalParts.push({ type: "text", content });
         }

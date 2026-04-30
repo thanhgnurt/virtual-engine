@@ -177,6 +177,18 @@ const ReactVirtualChatbotInner = (
   const onStateChangeRef = useRef(onStateChange);
   onStateChangeRef.current = onStateChange;
 
+  // Force initial UI update once engine is ready
+  useLayoutEffect(() => {
+    if (engine) {
+      const initialRange = store.virtualModule.getRange();
+      if (initialRange && initialRange.end > 0) {
+        rangeRef.current = initialRange;
+      }
+      updateUI(rangeRef.current);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [engine, store.virtualModule]);
+
   // Subscribe to store changes
   useEffect(() => {
     // Sync initial state (including persisted values)
@@ -258,6 +270,15 @@ const ReactVirtualChatbotInner = (
   );
 
   const anchorRef = useRef({ index: -1, offset: 0 });
+ 
+   const observersRef = useRef<Map<number, ResizeObserver>>(new Map());
+ 
+   useEffect(() => {
+     return () => {
+       observersRef.current.forEach((obs) => obs.disconnect());
+       observersRef.current.clear();
+     };
+   }, []);
 
   const recordAnchor = useCallback(() => {
     const container = containerRef.current;
@@ -335,12 +356,13 @@ const ReactVirtualChatbotInner = (
 
   const updateUI = useCallback(
     (newRange?: VirtualChatbotRange) => {
-      if (!engine) return;
+      const currentEngine = store.virtualModule.getEngine();
+      if (!currentEngine) return;
       recordAnchor();
       const range = newRange || rangeRef.current;
       const its = itemsRef.current;
       const pool = poolSize;
-      const slotMap = engine.getSlotMap(range, pool, slotMapRef.current);
+      const slotMap = currentEngine.getSlotMap(range, pool, slotMapRef.current);
 
       for (let s = 0; s < pool; s++) {
         const i = slotMap[s];
@@ -353,7 +375,7 @@ const ReactVirtualChatbotInner = (
 
         if (isContentChanged || isVisChanged) {
           const wrapper = wrapperRefs.current[s];
-          const top = isOutOfRange ? -9999 : engine.getOffset(i);
+          const top = isOutOfRange ? -9999 : currentEngine.getOffset(i);
           if (wrapper) {
             wrapper.style.transform = `translateY(${top}px)`;
             wrapper.style.visibility = isVisible ? "visible" : "hidden";
@@ -430,17 +452,21 @@ const ReactVirtualChatbotInner = (
       if (h > 0 && h !== viewHRef.current) {
         viewHRef.current = h;
         store.virtualModule.updateViewport(h);
-        const el = containerRef.current;
-        const currentEngine = store.virtualModule.getEngine();
-        if (followOutput && isAtBottomRef.current && el && currentEngine) {
-          el.scrollTop = Math.max(0, currentEngine.getTotalHeight() - h);
+        if (followOutput && isAtBottomRef.current) {
+          const engine = store.virtualModule.getEngine();
+          if (engine) {
+             const targetST = Math.max(0, engine.getTotalHeight() - h);
+             containerRef.current!.scrollTop = targetST;
+             store.virtualModule.handleScroll(targetST);
+          }
         }
         updateUI();
       }
     });
     obs.observe(containerRef.current);
     return () => obs.disconnect();
-  }, [engine, updateUI, followOutput]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [engine, followOutput]);
 
   const updateRange = useCallback(
     (scrollTop: number) => {
@@ -577,12 +603,23 @@ const ReactVirtualChatbotInner = (
           ref={(r) => {
             wrapperRefs.current[s] = r;
             if (r) {
-               // Use ResizeObserver for async height updates
-               const obs = new ResizeObserver(() => {
-                 const idx = lastIndicesRef.current[s];
-                 if (idx >= 0) syncHeight(idx, s);
-               });
-               obs.observe(r);
+              // Disconnect old if exists
+              observersRef.current.get(s)?.disconnect();
+
+              const obs = new ResizeObserver((entries) => {
+                const entry = entries[0];
+                if (!entry) return;
+
+                const idx = lastIndicesRef.current[s];
+                if (idx >= 0) {
+                  // Ensure we don't sync height while anchoring to avoid jitter
+                  if (!isAnchoringRef.current) {
+                    syncHeight(idx, s);
+                  }
+                }
+              });
+              obs.observe(r);
+              observersRef.current.set(s, obs);
             }
           }}
           style={{

@@ -38,32 +38,53 @@ const Sidebar = () => (
 
 const MOCK_MESSAGES: ChatMessage[] = Array.from({ length: 50 }).map((_, i) => {
   const isUser = i % 2 === 0;
+  const role = isUser ? "user" : "assistant";
   const id = `msg_${i + 1}`;
+  const prefix = `[Row #${i}] `;
   
-  if (i === 0) return { id, role: "user", content: "Chào bạn! Engine này có hỗ trợ code không?" };
-  if (i === 1) return { 
-    id, role: "assistant", 
-    content: "Chào bạn! Hệ thống hỗ trợ rất tốt. Đây là ví dụ về Rust:\n\n```rust\nfn main() {\n    println!(\"Hello, Virtual Engine!\");\n}\n```" 
-  };
-  
-  if (i % 7 === 0) return {
-    id, role: "assistant",
-    content: "Đây là một hình ảnh minh họa cho khả năng hiển thị media:",
-    metadata: { url: `https://picsum.photos/seed/${i}/800/${300 + (i % 3) * 100}`, aspectRatio: "1.6" }
+  // Custom logic for the first few messages to set the stage
+  if (i === 0) return { id, role, content: prefix + "Chào AI! Bạn hỗ trợ những gì?" };
+  if (i === 1) return { id, role, content: prefix + "Chào bạn! Tôi có thể giúp bạn viết code, giải thích kỹ thuật và hiển thị hình ảnh." };
+  if (i === 2) return { id, role, content: prefix + "Tuyệt! Cho mình xem một đoạn code Rust tính Fibonacci và một hình ảnh đẹp nhé." };
+  if (i === 3) return { 
+    id, role, 
+    content: prefix + "Tất nhiên! Đây là ví dụ về Rust:\n\n```rust\nfn fib(n: u32) -> u32 {\n    if n <= 1 { return n; }\n    fib(n - 1) + fib(n - 2)\n}\n```",
+    metadata: { url: `https://picsum.photos/seed/${i}/1200/600`, aspectRatio: "2" }
   };
 
-  if (i % 5 === 0) return {
-    id, role: "assistant",
-    content: "Để tôi giải thích chi tiết hơn về cơ chế Virtualization:\n\nLorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.\n\nExcepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum."
-  };
+  // General alternating variety for the rest
+  if (isUser) {
+    if (i % 6 === 0) return { id, role, content: prefix + "Giải thích cho mình thêm về Physical DOM Pool đi." };
+    if (i % 4 === 0) return { id, role, content: prefix + "Cho mình thêm một vài ví dụ về hình ảnh nữa." };
+    return { id, role, content: prefix + (i % 3 === 0 ? "Bạn thấy hệ thống này thế nào?" : "Ok, tiếp tục đi.") };
+  } else {
+    // Explicit image messages
+    if (i === 11) return {
+      id, role,
+      content: prefix + "Tôi tìm thấy một hình ảnh tuyệt đẹp cho bạn đây:",
+      metadata: { url: `https://picsum.photos/seed/${i + 500}/1000/500`, aspectRatio: "2" }
+    };
+    if (i === 25) return {
+      id, role,
+      content: prefix + "Một góc nhìn khác để bạn tham khảo layout:",
+      metadata: { url: `https://picsum.photos/seed/${i + 700}/800/600`, aspectRatio: "1.33" }
+    };
+    if (i === 37) return {
+      id, role,
+      content: prefix + "Đây là một hình ảnh minh họa cho layout dọc (Portrait):",
+      metadata: { url: `https://picsum.photos/seed/${i + 800}/500/800`, aspectRatio: "0.625" }
+    };
 
-  return {
-    id,
-    role: isUser ? "user" : "assistant",
-    content: isUser 
-        ? (i % 3 === 0 ? "Viết cho mình đoạn code Python tính số nguyên tố nhé." : "Cho mình xem một hình ảnh đẹp đi.")
-        : (i % 4 === 0 ? "Tất nhiên rồi! Đây là đoạn code bạn cần:\n\n```python\ndef is_prime(n):\n    return n > 1 and all(n % i for i in range(2, int(n**0.5) + 1))\n```" : "Hệ thống của chúng tôi luôn sẵn sàng hỗ trợ bạn bất cứ lúc nào.")
-  };
+    // General text/code messages
+    if (i % 5 === 1) return {
+      id, role,
+      content: prefix + "Để tối ưu hóa hiệu năng, tôi đề xuất sử dụng TypeScript với các interface chặt chẽ. Đây là ví dụ về một Generic Repository pattern:\n\n```typescript\ninterface IRepository<T> {\n  getAll(): Promise<T[]>;\n  getById(id: string): Promise<T | null>;\n  create(item: T): Promise<void>;\n}\n\nclass BaseRepository<T> implements IRepository<T> {\n  private items: T[] = [];\n  async getAll() { return this.items; }\n  async getById(id: string) { return null; }\n  async create(item: T) { this.items.push(item); }\n}\n```"
+    };
+    return { 
+      id, role, 
+      content: prefix + (i % 4 === 1 ? "Đừng quên SQL để quản lý dữ liệu. Đây là một câu query phức tạp:\n\n```sql\nSELECT u.name, COUNT(o.id) as total_orders\nFROM users u\nJOIN orders o ON u.id = o.user_id\nWHERE o.status = 'completed'\nGROUP BY u.name\nHAVING COUNT(o.id) > 5\nORDER BY total_orders DESC;\n```" : "Đây là một đoạn code Python khác cho bạn:\n\n```python\nimport math\ndef calculate_circle_area(radius):\n    return math.pi * (radius ** 2)\nprint(f'Area: {calculate_circle_area(5)}')\n```")
+    };
+  }
 });
 
 function App() {
@@ -78,12 +99,6 @@ function App() {
 
   const chatbotRef = useRef<ReactVirtualChatbotHandle<ChatMessage>>(null);
   const inputRef = useRef<ChatInputHandle>(null);
-
-  useEffect(() => {
-    if (chatbotRef.current) {
-      chatbotRef.current.appendItems(MOCK_MESSAGES);
-    }
-  }, []);
 
   // --- 1. Fallback Fetcher Implementation ---
   const fallbackFetcher = useRef<IChatFetcher>({
