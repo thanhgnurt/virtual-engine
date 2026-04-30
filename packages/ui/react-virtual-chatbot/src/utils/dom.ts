@@ -39,3 +39,10 @@ export function setTextNode(el: HTMLElement, value: string): void {
   el.appendChild(textNode);
   textNodeMap.set(el, textNode);
 }
+
+/**
+ * Retrieves the persistent TextNode associated with an element.
+ */
+export function getTextNode(el: HTMLElement): Text | undefined {
+  return textNodeMap.get(el);
+}

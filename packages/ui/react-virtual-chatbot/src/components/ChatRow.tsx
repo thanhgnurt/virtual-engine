@@ -26,8 +26,9 @@ export const ChatRow = memo(
       className?: string;
       item?: ChatMessage | null;
       codeHighlighting?: boolean;
+      physicalId?: number;
     }
-  >(({ className, item: initialItem, codeHighlighting }, ref) => {
+  >(({ className, item: initialItem, codeHighlighting, physicalId }, ref) => {
     // Core Refs
     const containerRef = useRef<HTMLDivElement>(null);
     const bubbleRef = useRef<HTMLDivElement>(null);
@@ -35,6 +36,7 @@ export const ChatRow = memo(
     const editRef = useRef<HTMLDivElement>(null);
     const partRefs = useRef<(ISubContentHandle | null)[]>([]);
     const currentItemRef = useRef<ChatMessage | null>(initialItem || null);
+    const currentIndexRef = useRef<number>(-1);
 
     // State
     const [isExpanded, setIsExpanded] = useState(false);
@@ -49,20 +51,20 @@ export const ChatRow = memo(
       }
     }, []);
 
-    const doUpdate = (item: ChatMessage | null) => {
+    const doUpdate = (item: ChatMessage | null, newIndex?: number) => {
       if (!item || !containerRef.current) return;
 
-      // --- 0. Cleanup Old Registry ---
-      const oldIndex = (currentItemRef.current as any)?.index;
-      if (typeof oldIndex === "number" && oldIndex >= 0) {
+      // --- 0. Cleanup Old Mapping ---
+      const oldIndex = currentIndexRef.current;
+      if (oldIndex >= 0) {
         store.dom.unregisterRow(oldIndex);
-        partRefs.current.forEach((_, i) =>
-          store.contentRegistryModule.unregister(oldIndex, i),
-        );
-        store.componentRegistryModule.unregister(oldIndex, "dots");
+        store.contentRegistryModule.unlinkLogical(oldIndex);
       }
 
       currentItemRef.current = item;
+      if (typeof newIndex === "number") {
+        currentIndexRef.current = newIndex;
+      }
 
       const role = item.role || "user";
       roleRef.current = role;
@@ -167,36 +169,26 @@ export const ChatRow = memo(
       requestAnimationFrame(checkHeight);
 
       // --- 4. Registry Update ---
-      const index = (item as any).index;
-      if (typeof index === "number" && index >= 0) {
+      const activeIndex = currentIndexRef.current;
+      if (activeIndex >= 0) {
         // Level 1: Register Row Container
         if (containerRef.current) {
-          store.dom.registerRow(index, containerRef.current, ref as any);
+          store.dom.registerRow(activeIndex, containerRef.current, ref as any);
         }
 
-        // Level 2: Register Content Slots (TextNodes)
-        partRefs.current.forEach((slot, i) => {
-          const el = (slot as any)?.getTextElement?.();
-          if (el) {
-            store.contentRegistryModule.register(index, i, el);
-          }
-        });
-
-        // Level 3: Register UI Components
-        const dotsEl = prefixRef.current?.getDotsElement();
-        if (dotsEl) {
-          store.componentRegistryModule.register(index, "dots", dotsEl);
+        // Level 2: Link Logical to Physical in Store
+        if (typeof physicalId === "number") {
+          store.contentRegistryModule.linkLogicalToPhysical(activeIndex, physicalId);
         }
 
         // FORCE MEASUREMENT: ResizeObserver ignores changes if a recycled slot happens to have the same height.
         // CRITICAL: Force measurement after update to ensure engine has correct height even if ResizeObserver misses it
         requestAnimationFrame(() => {
           if (containerRef.current) {
-            const currentIdx = (currentItemRef.current as any)?.index ?? -1;
-            if (currentIdx === index) {
+            if (currentIndexRef.current === activeIndex) {
               const h = containerRef.current.offsetHeight;
               store.emit(ChatEvent.ITEM_HEIGHT_CHANGED, undefined, {
-                index,
+                index: activeIndex,
                 height: h,
               });
             }
@@ -208,10 +200,8 @@ export const ChatRow = memo(
     useImperativeHandle(ref, () => ({
       doUpdate,
       update: (item, index) => {
-        if (item && typeof index === "number") {
-          doUpdate({ ...item, index } as any);
-        } else if (item) {
-          doUpdate(item as any);
+        if (item) {
+          doUpdate(item, index);
         }
       },
       updateText: (text) => {
@@ -223,7 +213,7 @@ export const ChatRow = memo(
           }
           requestAnimationFrame(checkHeight);
         } else {
-          doUpdate({ ...currentItemRef.current, content: text } as any);
+          doUpdate({ ...currentItemRef.current, content: text } as ChatMessage);
         }
       },
       container: containerRef.current,
@@ -238,15 +228,35 @@ export const ChatRow = memo(
       }
     }, [slotCount]);
 
+    // --- Physical Registration ---
+    // Register physical DOM elements ONCE per slotCount change
+    // Using useLayoutEffect to ensure registration happens before any potential streaming update
+    useLayoutEffect(() => {
+      if (typeof physicalId === "number") {
+        // 1. Register content slots
+        const containers = partRefs.current.map(
+          (slot) => (slot as any)?.getContainer?.() || null,
+        );
+        store.contentRegistryModule.registerPhysicalSlots(physicalId, containers);
+
+        // 2. Register UI components (Dots, etc.)
+        const dotsEl = prefixRef.current?.getDotsElement();
+        if (dotsEl) {
+          store.contentRegistryModule.registerPhysicalComponent(
+            physicalId,
+            "dots",
+            dotsEl,
+          );
+        }
+      }
+    }, [physicalId, slotCount]);
+
     useEffect(() => {
       return () => {
-        const index = (currentItemRef.current as any)?.index;
-        if (typeof index === "number") {
-          store.dom.unregisterRow(index);
-          // Cleanup contents
-          partRefs.current.forEach((_, i) => {
-            store.contentRegistryModule.unregister(index, i);
-          });
+        const cleanupIndex = currentIndexRef.current;
+        if (cleanupIndex >= 0) {
+          store.dom.unregisterRow(cleanupIndex);
+          store.contentRegistryModule.unlinkLogical(cleanupIndex);
         }
       };
     }, []);

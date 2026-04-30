@@ -1,7 +1,7 @@
 import MarkdownIt from "markdown-it";
 import { forwardRef, memo, useImperativeHandle, useRef, useEffect } from "react";
 import { ISubContentHandle } from "../types";
-import { setTextNode } from "../utils/dom";
+import { setTextNode, getTextNode } from "../utils/dom";
 
 const md = new MarkdownIt({
   html: true,
@@ -73,6 +73,9 @@ export const ChatText = memo(
         // Render rich markdown
         containerRef.current.innerHTML = md.render(content);
         lastRenderedContentRef.current = content;
+      },
+      getContainer: () => {
+        return containerRef.current;
       },
     }));
 

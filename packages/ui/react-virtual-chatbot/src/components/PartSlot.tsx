@@ -43,6 +43,9 @@ export const PartSlot = memo(
           containerRef.current.style.display = visible ? "block" : "none";
         }
       },
+      getContainer: () => {
+        return (textRef.current as any)?.getContainer?.() || null;
+      },
     }));
 
     return (

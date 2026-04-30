@@ -2,9 +2,10 @@ import React, { forwardRef, memo } from "react";
 import { IVirtualChatRowHandle } from "../types";
 
 interface EngineSlotProps<T> {
+  physicalId: number;
   initialIndex: number;
   initialData: T | null;
-  renderItem: (item: T | null, index: number) => React.ReactElement;
+  renderItem: (item: T | null, index: number, physicalId: number) => React.ReactElement;
 }
 
 /**
@@ -14,10 +15,10 @@ interface EngineSlotProps<T> {
 export const EngineSlot = memo(
   forwardRef(
     <T,>(
-      { initialIndex, initialData, renderItem }: EngineSlotProps<T>,
+      { physicalId, initialIndex, initialData, renderItem }: EngineSlotProps<T>,
       ref: React.Ref<IVirtualChatRowHandle<T>>,
     ) => {
-      const node = renderItem(initialData, initialIndex);
+      const node = renderItem(initialData, initialIndex, physicalId);
       if (React.isValidElement(node)) {
         return React.cloneElement(node as React.ReactElement, { ref });
       }

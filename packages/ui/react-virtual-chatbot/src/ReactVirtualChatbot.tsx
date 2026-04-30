@@ -209,11 +209,17 @@ const ReactVirtualChatbotInner = (
             ref={(r) => {
               store.dom.registerHandle(s, r);
             }}
+            physicalId={s}
             initialIndex={-1}
             initialData={null}
-            renderItem={(item: ChatMessage | null, index: number) => {
-              if (renderItem) return renderItem(item as any, index);
-              return ChatRenderer(item, index, codeHighlighting);
+            renderItem={(
+              item: ChatMessage | null,
+              index: number,
+              pId: number,
+            ) => {
+              if (renderItem)
+                return (renderItem as any)(item as any, index, pId);
+              return ChatRenderer(item, index, codeHighlighting, pId);
             }}
           />
         </div>,

@@ -59,8 +59,8 @@ export class SyncModule extends BaseModule<ChatStore, ChatEvent> {
       } else {
         const node = this.store.contentRegistryModule.get(index, 0);
         if (node) {
-          setTextNode(node as any, content);
-          const parent = (node as any).parentElement;
+          setTextNode(node, content);
+          const parent = node.parentElement;
           if (parent && parent.style.display === "none") {
             parent.style.display = "block";
           }

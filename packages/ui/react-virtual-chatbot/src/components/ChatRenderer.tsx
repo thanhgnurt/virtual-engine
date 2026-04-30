@@ -6,6 +6,7 @@ export const ChatRenderer = (
   item: ChatMessage | null,
   index: number,
   codeHighlighting?: boolean,
+  physicalId?: number,
 ) => {
   if (item?.role === "assistant") {
     return (
@@ -13,7 +14,11 @@ export const ChatRenderer = (
         <div className="ai-message-prefix">
           <Sparkle isLoading={item.metadata?.isLoading} />
         </div>
-        <ChatRow item={item} codeHighlighting={codeHighlighting} />
+        <ChatRow
+          item={item}
+          codeHighlighting={codeHighlighting}
+          physicalId={physicalId}
+        />
       </div>
     );
   }
@@ -23,6 +28,7 @@ export const ChatRenderer = (
       key={item?.id}
       item={item}
       codeHighlighting={codeHighlighting}
+      physicalId={physicalId}
     />
   );
 };
