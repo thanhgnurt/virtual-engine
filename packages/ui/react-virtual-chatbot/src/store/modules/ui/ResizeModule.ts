@@ -7,7 +7,37 @@ import { ChatEvent } from "../../types";
  */
 export class ResizeModule extends BaseModule<any, ChatEvent> {
   private observers: Map<number, ResizeObserver> = new Map();
+  private containerObserver: ResizeObserver | null = null;
   private isAnchoring: boolean = false;
+
+  /**
+   * Initializes a ResizeObserver for the main scroller/container.
+   * This handles both window resize and container-specific size changes.
+   */
+  public initContainer(el: HTMLElement | null) {
+    if (this.containerObserver) {
+      this.containerObserver.disconnect();
+      this.containerObserver = null;
+    }
+
+    if (el) {
+      this.containerObserver = new ResizeObserver((entries) => {
+        if (this.isAnchoring) return;
+        const entry = entries[0];
+        if (!entry) return;
+
+        const height = entry.contentRect.height;
+        const currentEngine = this.store.virtualModule.getEngine();
+        if (currentEngine && height > 0) {
+          // Sync new viewport height to engine
+          currentEngine.updateOptions({ viewportHeight: height });
+          // Force layout update
+          this.store.layoutModule.updateUI();
+        }
+      });
+      this.containerObserver.observe(el);
+    }
+  }
 
   /**
    * Temporarily pauses reporting of height changes during scroll anchoring 

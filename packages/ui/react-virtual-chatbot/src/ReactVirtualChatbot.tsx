@@ -262,21 +262,7 @@ const ReactVirtualChatbotInner = (
     return unsub;
   }, [store]);
 
-  // Viewport & Scroll
-  useLayoutEffect(() => {
-    if (!containerRef.current) return;
-    const obs = new ResizeObserver((entries) => {
-      const h = entries[0].contentRect.height;
-      if (h > 0 && h !== viewHRef.current) {
-        viewHRef.current = h;
-        store.virtualModule.updateViewport(h);
-        store.layoutModule.updateUI();
-      }
-    });
-    obs.observe(containerRef.current);
-    return () => obs.disconnect();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [engine, followOutput]);
+
 
   useLayoutEffect(() => {
     const el = containerRef.current;
@@ -431,6 +417,7 @@ const ReactVirtualChatbotInner = (
         ref={(r) => {
           containerRef.current = r;
           store.dom.registerContainer(r);
+          store.resizeModule.initContainer(r);
         }}
         className={className}
         style={{
