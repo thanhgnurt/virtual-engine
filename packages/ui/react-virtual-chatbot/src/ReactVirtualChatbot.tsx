@@ -1,80 +1,23 @@
 import React, {
   forwardRef,
-  memo,
   useEffect,
   useImperativeHandle,
   useLayoutEffect,
   useMemo,
   useRef,
+  useState,
 } from "react";
+import { DefaultChatRenderer } from "./components/DefaultChatRenderer";
+import { EngineSlot } from "./components/EngineSlot";
 import { TypingIndicator } from "./components/TypingIndicator";
-import { GeminiSparkle } from "./components/GeminiSparkle";
-import { UniversalChatRow } from "./components/UniversalChatRow";
 import { ChatStore } from "./store";
 import { ChatProvider } from "./store/ChatContext";
 import { ChatEvent } from "./store/types";
 import {
   ChatMessage,
-  IVirtualChatRowHandle,
   ReactVirtualChatbotHandle,
   ReactVirtualChatbotProps,
 } from "./types";
-
-
-// ─────────────────────────────────────────────
-// Sub-components
-// ─────────────────────────────────────────────
-
-const EngineSlot = memo(
-  forwardRef(
-    <T,>(
-      {
-        initialIndex,
-        initialData,
-        renderItem,
-      }: {
-        initialIndex: number;
-        initialData: T | null;
-        renderItem: (item: T | null, index: number) => React.ReactElement;
-      },
-      ref: React.Ref<IVirtualChatRowHandle<T>>,
-    ) => {
-      const node = renderItem(initialData, initialIndex);
-      if (React.isValidElement(node)) {
-        return React.cloneElement(node as React.ReactElement, { ref });
-      }
-      return <>{node}</>;
-    },
-  ),
-  () => true,
-);
-
-const DefaultChatRenderer = (
-  item: ChatMessage | null,
-  index: number,
-  codeHighlighting?: boolean,
-) => {
-  if (item?.role === "assistant") {
-    return (
-      <div key={item.id} className="assistant-message-wrapper">
-        <div className="ai-message-prefix">
-          <GeminiSparkle isLoading={item.metadata?.isLoading} />
-        </div>
-        <UniversalChatRow
-          item={{ ...item, index } as any}
-          codeHighlighting={codeHighlighting}
-        />
-      </div>
-    );
-  }
-  return (
-    <UniversalChatRow
-      key={item?.id || index}
-      item={{ ...item, index } as any}
-      codeHighlighting={codeHighlighting}
-    />
-  );
-};
 
 // ─────────────────────────────────────────────
 // Main Component
@@ -119,7 +62,7 @@ const ReactVirtualChatbotInner = (
   } = props;
 
   // 1. Store Initialization (The Heart of the Black Box)
-  const store = useMemo(
+  const [store] = useState(
     () =>
       new ChatStore({
         worker,
@@ -130,7 +73,6 @@ const ReactVirtualChatbotInner = (
           history: initialHistory || [],
         },
       }),
-    [],
   );
 
   // Sync props to store
@@ -201,10 +143,6 @@ const ReactVirtualChatbotInner = (
     };
   }, [store, engine, followOutput]);
 
-
-
-
-
   // ─────────────────────────────────────────────
   // Imperative Handle
   // ─────────────────────────────────────────────
@@ -251,7 +189,8 @@ const ReactVirtualChatbotInner = (
       }
     },
     setBottomBuffer: (h) => store.scrollModule.setBottomBuffer(h),
-    setTyping: (isVisible: boolean) => store.uiStatusModule.setTyping(isVisible),
+    setTyping: (isVisible: boolean) =>
+      store.uiStatusModule.setTyping(isVisible),
   }));
 
   const nodePool = useMemo(() => {
