@@ -1,6 +1,6 @@
 import { ChatMessage } from "../types";
 import { GeminiSparkle } from "./GeminiSparkle";
-import { UniversalChatRow } from "./UniversalChatRow";
+import { ChatRow } from "./ChatRow";
 
 interface DefaultChatRendererProps {
   item: ChatMessage | null;
@@ -23,13 +23,13 @@ export const DefaultChatRenderer = (
         <div className="ai-message-prefix">
           <GeminiSparkle isLoading={item.metadata?.isLoading} />
         </div>
-        <UniversalChatRow item={item} codeHighlighting={codeHighlighting} />
+        <ChatRow item={item} codeHighlighting={codeHighlighting} />
       </div>
     );
   }
 
   return (
-    <UniversalChatRow
+    <ChatRow
       key={item?.id}
       item={item}
       codeHighlighting={codeHighlighting}

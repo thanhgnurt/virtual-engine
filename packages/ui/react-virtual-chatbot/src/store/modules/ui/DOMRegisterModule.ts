@@ -16,7 +16,7 @@ export class DOMRegisterModule extends BaseModule<any, ChatEvent> {
   // Lưu trữ các React Component Handles (EngineSlot) để gọi imperative updates
   private _handles = new Map<number, any>();
 
-  // Lưu trữ các Dòng Chat thực tế (UniversalChatRow) theo chỉ số dữ liệu gốc
+  // Lưu trữ các Dòng Chat thực tế (ChatRow) theo chỉ số dữ liệu gốc
   private _rows = new Map<number, { el: HTMLElement; handle?: any }>();
 
   // --- Container & Content ---

@@ -5,7 +5,7 @@ export { VirtualChatCode } from "./components/VirtualChatCode";
 export { VirtualChatImage } from "./components/VirtualChatImage";
 export { ChatInput, type ChatInputHandle } from "./components/ChatInput";
 export { GeminiSparkle, type GeminiSparkleProps } from "./components/GeminiSparkle";
-export { UniversalChatRow } from "./components/UniversalChatRow";
+export { ChatRow } from "./components/ChatRow";
 export { ReactVirtualChatbot } from "./ReactVirtualChatbot";
 export * from "./store";
 export * from "./store/ChatContext";
