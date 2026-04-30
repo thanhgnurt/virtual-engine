@@ -270,12 +270,6 @@ const ReactVirtualChatbotInner = (
 
   const rangeRef = useRef<VirtualChatbotRange>({ start: 0, end: 0 });
   const slotMapRef = useRef<Int32Array>(new Int32Array(MAX_POOL));
-  const refsRef = useRef<(IVirtualChatRowHandle<ChatMessage> | null)[]>(
-    new Array(MAX_POOL).fill(null),
-  );
-  const wrapperRefs = useRef<(HTMLDivElement | null)[]>(
-    new Array(MAX_POOL).fill(null),
-  );
   const lastIdsRef = useRef<(unknown | null)[]>(new Array(MAX_POOL).fill(null));
   const lastIndicesRef = useRef<Int32Array>(new Int32Array(MAX_POOL).fill(-2));
   const lastVisRef = useRef<Uint8Array>(new Uint8Array(MAX_POOL).fill(0));
@@ -350,7 +344,7 @@ const ReactVirtualChatbotInner = (
         const isOffsetChanged = lastOffsetsRef.current[s] !== top;
 
         if (isContentChanged || isVisChanged || isOffsetChanged) {
-          const wrapper = wrapperRefs.current[s];
+          const wrapper = store.dom.getWrapper(s);
           if (wrapper) {
             wrapper.style.transform = `translateY(${top}px)`;
             wrapper.style.visibility = isVisible ? "visible" : "hidden";
@@ -360,7 +354,7 @@ const ReactVirtualChatbotInner = (
           lastVisRef.current[s] = isVisible ? 1 : 0;
           lastOffsetsRef.current[s] = top;
 
-          const slotHandle = refsRef.current[s];
+          const slotHandle = store.dom.getHandle(s);
           if (slotHandle && (isContentChanged || isVisChanged)) {
             slotHandle.update(item, i, wrapper, isVisible);
           }
@@ -380,7 +374,7 @@ const ReactVirtualChatbotInner = (
 
   const syncHeight = useCallback(
     (index: number, slotIndex: number, height: number) => {
-      const wrapper = wrapperRefs.current[slotIndex];
+      const wrapper = store.dom.getWrapper(slotIndex);
       const container = containerRef.current;
       const currentEngine = store.virtualModule.getEngine();
       if (!wrapper || index < 0 || !container || !currentEngine) return;
@@ -418,7 +412,7 @@ const ReactVirtualChatbotInner = (
     buffer.forEach((content, idx) => {
       for (let s = 0; s < poolSize; s++) {
         if (lastIndicesRef.current[s] === idx) {
-          const slot = refsRef.current[s];
+          const slot = store.dom.getHandle(s);
           if (slot) {
             slot.updateText(content);
           }
@@ -612,7 +606,7 @@ const ReactVirtualChatbotInner = (
         <div
           key={s}
           ref={(r) => {
-            wrapperRefs.current[s] = r;
+            store.dom.registerWrapper(s, r);
             store.resizeModule.register(s, r);
           }}
           style={{
@@ -627,7 +621,7 @@ const ReactVirtualChatbotInner = (
         >
           <EngineSlot
             ref={(r) => {
-              refsRef.current[s] = r;
+              store.dom.registerHandle(s, r);
             }}
             initialIndex={-1}
             initialData={null}
@@ -645,7 +639,10 @@ const ReactVirtualChatbotInner = (
   return (
     <ChatProvider store={store}>
       <div
-        ref={containerRef}
+        ref={(r) => {
+          containerRef.current = r;
+          store.dom.registerContainer(r);
+        }}
         className={className}
         style={{
           height: "100%",
@@ -656,7 +653,10 @@ const ReactVirtualChatbotInner = (
         }}
       >
         <div
-          ref={contentRef}
+          ref={(r) => {
+            contentRef.current = r;
+            store.dom.registerContent(r);
+          }}
           style={{
             height: (engine?.getTotalHeight() || 0) + bufferHeightRef.current,
             width: "100%",

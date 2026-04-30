@@ -50,8 +50,8 @@ export class SyncModule extends BaseModule<ChatStore, ChatEvent> {
         content.includes("\n");
 
       if (isComplex) {
-        const handle = this.store.rowRegistryModule.getHandle(index);
-        if (handle) {
+        const handle = this.store.dom.getRowHandle(index);
+        if (handle && handle.updateText) {
           handle.updateText(content);
         } else {
           remaining.set(index, content); // Retry next tick

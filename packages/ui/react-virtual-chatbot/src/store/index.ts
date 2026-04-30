@@ -6,8 +6,8 @@ import { WorkerModule } from "./modules/infra/WorkerModule";
 import { ComponentRegistryModule } from "./modules/ui/ComponentRegistryModule";
 import { ContentRegistryModule } from "./modules/ui/ContentRegistryModule";
 import { LayoutModule } from "./modules/ui/LayoutModule";
+import { DOMRegisterModule } from "./modules/ui/DOMRegisterModule";
 import { ResizeModule } from "./modules/ui/ResizeModule";
-import { RowRegistryModule } from "./modules/ui/RowRegistryModule";
 import { SyncModule } from "./modules/ui/SyncModule";
 import { VirtualModule } from "./modules/ui/VirtualModule";
 import { ChatEvent, ChatState } from "./types";
@@ -26,7 +26,7 @@ export class ChatStore extends BaseStore<ChatState, ChatEvent> {
   // Modules
   public historyModule!: HistoryModule;
   public workerModule!: WorkerModule;
-  public rowRegistryModule!: RowRegistryModule;
+  public dom!: DOMRegisterModule;
   public contentRegistryModule!: ContentRegistryModule;
   public componentRegistryModule!: ComponentRegistryModule;
   public syncModule!: SyncModule;
@@ -60,7 +60,7 @@ export class ChatStore extends BaseStore<ChatState, ChatEvent> {
     );
 
     // 3. UI Layer
-    this.rowRegistryModule = this.registerModule(new RowRegistryModule());
+    this.dom = this.registerModule(new DOMRegisterModule());
     this.contentRegistryModule = this.registerModule(
       new ContentRegistryModule(),
     );

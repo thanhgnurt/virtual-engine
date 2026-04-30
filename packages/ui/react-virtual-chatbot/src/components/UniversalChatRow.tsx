@@ -105,7 +105,7 @@ export const UniversalChatRow = memo(
         // --- 0. Cleanup Old Registry ---
         const oldIndex = (currentItemRef.current as any)?.index;
         if (typeof oldIndex === "number" && oldIndex >= 0) {
-          store.rowRegistryModule.unregister(oldIndex);
+          store.dom.unregisterRow(oldIndex);
           partRefs.current.forEach((_, i) => store.contentRegistryModule.unregister(oldIndex, i));
           store.componentRegistryModule.unregister(oldIndex, "dots");
         }
@@ -202,7 +202,7 @@ export const UniversalChatRow = memo(
         if (typeof index === "number" && index >= 0) {
           // Level 1: Register Row Container
           if (containerRef.current) {
-            store.rowRegistryModule.register(index, containerRef.current, ref as any);
+            store.dom.registerRow(index, containerRef.current, ref as any);
           }
 
           // Level 2: Register Content Slots (TextNodes)
@@ -251,7 +251,7 @@ export const UniversalChatRow = memo(
         return () => {
           const index = (currentItemRef.current as any)?.index;
           if (typeof index === 'number') {
-            store.rowRegistryModule.unregister(index);
+            store.dom.unregisterRow(index);
             // Cleanup contents
             partRefs.current.forEach((_, i) => {
                store.contentRegistryModule.unregister(index, i);

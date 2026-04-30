@@ -28,7 +28,7 @@ export class LayoutModule extends BaseModule<ChatStore, ChatEvent> {
   }
 
   public syncHeight(index: number): boolean {
-    const row = this.store.rowRegistryModule.get(index);
+    const row = this.store.dom.getRowElement(index);
     const engine = this.store.virtualModule.getEngine();
     if (!row || !engine) return false;
 
