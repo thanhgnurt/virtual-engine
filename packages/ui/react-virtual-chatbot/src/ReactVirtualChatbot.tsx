@@ -23,7 +23,7 @@ import {
 // Main Component
 // ─────────────────────────────────────────────
 
-const POOL_SIZE = 24;
+const POOL_SIZE = 32;
 
 /**
  * Extended Props for the "Black Box" Chatbot

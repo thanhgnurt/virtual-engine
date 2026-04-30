@@ -16,9 +16,7 @@ import {
   IVirtualChatRowHandle,
 } from "../types";
 import { GeminiSparkle } from "./GeminiSparkle";
-import { VirtualChatCode } from "./VirtualChatCode";
-import { VirtualChatImage } from "./VirtualChatImage";
-import { VirtualChatText } from "./VirtualChatText";
+import { UniversalPartSlot } from "./UniversalPartSlot";
 
 const UserEditIcon = () => (
   <div className="user-edit-icon">
@@ -49,64 +47,6 @@ const ChevronIcon = () => (
   >
     <path d="M6 9l6 6 6-6" />
   </svg>
-);
-
-/**
- * A dynamic slot that can render Text, Code, or Image.
- */
-const UniversalPartSlot = memo(
-  forwardRef<
-    ISubContentHandle,
-    { className?: string; codeHighlighting?: boolean }
-  >(({ codeHighlighting }, ref) => {
-    const textRef = useRef<ISubContentHandle>(null);
-    const codeRef = useRef<ISubContentHandle>(null);
-    const imageRef = useRef<ISubContentHandle>(null);
-    const containerRef = useRef<HTMLDivElement>(null);
-
-    useImperativeHandle(ref, () => ({
-      update: (content: string, metadata?: any) => {
-        const type = metadata?.type || "text";
-
-        // Hide all first
-        textRef.current?.setVisible(false);
-        codeRef.current?.setVisible(false);
-        imageRef.current?.setVisible(false);
-
-        if (type === "text") {
-          textRef.current?.setVisible(true);
-          textRef.current?.update(content);
-        } else if (type === "code") {
-          codeRef.current?.setVisible(true);
-          codeRef.current?.update(content, metadata);
-        } else if (type === "image") {
-          imageRef.current?.setVisible(true);
-          imageRef.current?.update(content, metadata);
-        }
-      },
-      setVisible: (visible: boolean) => {
-        if (containerRef.current) {
-          containerRef.current.style.display = visible ? "block" : "none";
-        }
-      },
-      getTextElement: () => {
-        // Return the DOM element of the VirtualChatText
-        return (textRef.current as any)?.container;
-      },
-    }));
-
-    return (
-      <div ref={containerRef} style={{ display: "none" }}>
-        <VirtualChatText ref={textRef} className="chat-content-text" />
-        <VirtualChatCode
-          ref={codeRef}
-          className="chat-content-code"
-          codeHighlighting={codeHighlighting}
-        />
-        <VirtualChatImage ref={imageRef} className="chat-content-image" />
-      </div>
-    );
-  }),
 );
 
 export const UniversalChatRow = memo(
@@ -290,7 +230,10 @@ export const UniversalChatRow = memo(
             const currentIdx = (currentItemRef.current as any)?.index ?? -1;
             if (currentIdx === index) {
               const h = containerRef.current.offsetHeight;
-              store.emit(ChatEvent.ITEM_HEIGHT_CHANGED, undefined, { index, height: h });
+              store.emit(ChatEvent.ITEM_HEIGHT_CHANGED, undefined, {
+                index,
+                height: h,
+              });
             }
           }
         });

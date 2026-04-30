@@ -1,4 +1,3 @@
-import React from "react";
 import { ChatMessage } from "../types";
 import { GeminiSparkle } from "./GeminiSparkle";
 import { UniversalChatRow } from "./UniversalChatRow";
@@ -24,18 +23,15 @@ export const DefaultChatRenderer = (
         <div className="ai-message-prefix">
           <GeminiSparkle isLoading={item.metadata?.isLoading} />
         </div>
-        <UniversalChatRow
-          item={{ ...item, index } as any}
-          codeHighlighting={codeHighlighting}
-        />
+        <UniversalChatRow item={item} codeHighlighting={codeHighlighting} />
       </div>
     );
   }
 
   return (
     <UniversalChatRow
-      key={item?.id || index}
-      item={{ ...item, index } as any}
+      key={item?.id}
+      item={item}
       codeHighlighting={codeHighlighting}
     />
   );
