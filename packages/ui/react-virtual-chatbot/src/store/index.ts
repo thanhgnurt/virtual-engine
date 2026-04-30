@@ -3,8 +3,6 @@ import { BaseStore } from "./core/BaseStore";
 import { HistoryModule } from "./modules/data/HistoryModule";
 import { PersistModule } from "./modules/data/PersistModule";
 import { WorkerModule } from "./modules/infra/WorkerModule";
-import { ComponentRegistryModule } from "./modules/ui/ComponentRegistryModule";
-import { ContentRegistryModule } from "./modules/ui/ContentRegistryModule";
 import { DOMRegisterModule } from "./modules/ui/DOMRegisterModule";
 import { LayoutModule } from "./modules/ui/LayoutModule";
 import { ResizeModule } from "./modules/ui/ResizeModule";
@@ -34,8 +32,6 @@ export class ChatStore extends BaseStore<ChatState, ChatEvent> {
   public historyModule!: HistoryModule;
   public workerModule!: WorkerModule;
   public dom!: DOMRegisterModule;
-  public contentRegistryModule!: ContentRegistryModule;
-  public componentRegistryModule!: ComponentRegistryModule;
   public syncModule!: SyncModule;
   public layoutModule!: LayoutModule;
   public virtualModule!: VirtualModule;
@@ -74,12 +70,6 @@ export class ChatStore extends BaseStore<ChatState, ChatEvent> {
 
     // 3. UI Layer
     this.dom = this.registerModule(new DOMRegisterModule());
-    this.contentRegistryModule = this.registerModule(
-      new ContentRegistryModule(),
-    );
-    this.componentRegistryModule = this.registerModule(
-      new ComponentRegistryModule(),
-    );
     this.syncModule = this.registerModule(new SyncModule());
     this.layoutModule = this.registerModule(new LayoutModule());
     this.virtualModule = this.registerModule(new VirtualModule());

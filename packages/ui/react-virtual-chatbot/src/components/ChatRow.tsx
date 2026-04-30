@@ -57,8 +57,7 @@ export const ChatRow = memo(
       // --- 0. Cleanup Old Mapping ---
       const oldIndex = currentIndexRef.current;
       if (oldIndex >= 0) {
-        store.dom.unregisterRow(oldIndex);
-        store.contentRegistryModule.unlinkLogical(oldIndex);
+        store.dom.unlinkLogical(oldIndex);
       }
 
       currentItemRef.current = item;
@@ -171,14 +170,9 @@ export const ChatRow = memo(
       // --- 4. Registry Update ---
       const activeIndex = currentIndexRef.current;
       if (activeIndex >= 0) {
-        // Level 1: Register Row Container
-        if (containerRef.current) {
-          store.dom.registerRow(activeIndex, containerRef.current, ref as any);
-        }
-
-        // Level 2: Link Logical to Physical in Store
+        // Level 1: Register Row Mapping
         if (typeof physicalId === "number") {
-          store.contentRegistryModule.linkLogicalToPhysical(activeIndex, physicalId);
+          store.dom.linkLogicalToPhysical(activeIndex, physicalId);
         }
 
         // FORCE MEASUREMENT: ResizeObserver ignores changes if a recycled slot happens to have the same height.
@@ -237,12 +231,12 @@ export const ChatRow = memo(
         const containers = partRefs.current.map(
           (slot) => (slot as any)?.getContainer?.() || null,
         );
-        store.contentRegistryModule.registerPhysicalSlots(physicalId, containers);
+        store.dom.registerPhysicalSlots(physicalId, containers);
 
         // 2. Register UI components (Dots, etc.)
         const dotsEl = prefixRef.current?.getDotsElement();
         if (dotsEl) {
-          store.contentRegistryModule.registerPhysicalComponent(
+          store.dom.registerPhysicalComponent(
             physicalId,
             "dots",
             dotsEl,
@@ -255,8 +249,7 @@ export const ChatRow = memo(
       return () => {
         const cleanupIndex = currentIndexRef.current;
         if (cleanupIndex >= 0) {
-          store.dom.unregisterRow(cleanupIndex);
-          store.contentRegistryModule.unlinkLogical(cleanupIndex);
+          store.dom.unlinkLogical(cleanupIndex);
         }
       };
     }, []);

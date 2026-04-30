@@ -50,14 +50,14 @@ export class SyncModule extends BaseModule<ChatStore, ChatEvent> {
         content.includes("\n");
 
       if (isComplex) {
-        const handle = this.store.dom.getRowHandle(index);
+        const handle = this.store.dom.getHandleByLogical(index);
         if (handle && handle.updateText) {
           handle.updateText(content);
         } else {
           remaining.set(index, content); // Retry next tick
         }
       } else {
-        const node = this.store.contentRegistryModule.get(index, 0);
+        const node = this.store.dom.getContentSlot(index, 0);
         if (node) {
           setTextNode(node, content);
           const parent = node.parentElement;
@@ -68,8 +68,6 @@ export class SyncModule extends BaseModule<ChatStore, ChatEvent> {
           remaining.set(index, content); // Retry next tick
         }
       }
-
-
     });
 
     this.updateBuffer = remaining;

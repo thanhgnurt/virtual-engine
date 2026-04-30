@@ -10,75 +10,80 @@ export class DOMRegisterModule extends BaseModule<any, ChatEvent> {
   private _container: HTMLElement | null = null;
   private _content: HTMLElement | null = null;
   
-  // Lưu trữ các DOM Wrapper (chứa style translateY)
+  // --- Physical Storage (Index 0-19) ---
   private _wrappers = new Map<number, HTMLElement>();
-  
-  // Lưu trữ các React Component Handles (EngineSlot) để gọi imperative updates
   private _handles = new Map<number, any>();
+  private _contentSlots = new Map<number, (HTMLElement | null)[]>();
+  private _physicalComponents = new Map<number, Map<string, HTMLElement>>();
 
-  // Lưu trữ các Dòng Chat thực tế (ChatRow) theo chỉ số dữ liệu gốc
-  private _rows = new Map<number, { el: HTMLElement; handle?: any }>();
+  // --- Logical Mapping (logicalIndex -> physicalId) ---
+  private _logicalToPhysical = new Map<number, number>();
 
   // --- Container & Content ---
+  public registerContainer(el: HTMLElement | null): void { this._container = el; }
+  public getContainer(): HTMLElement | null { return this._container; }
+  public registerContent(el: HTMLElement | null): void { this._content = el; }
+  public getContent(): HTMLElement | null { return this._content; }
 
-  public registerContainer(el: HTMLElement | null): void {
-    this._container = el;
+  // --- Physical Registration (Called by ChatRow on Mount) ---
+  public registerWrapper(physicalId: number, el: HTMLElement | null): void {
+    if (el) this._wrappers.set(physicalId, el);
+    else this._wrappers.delete(physicalId);
   }
 
-  public getContainer(): HTMLElement | null {
-    return this._container;
+  public registerHandle(physicalId: number, handle: any): void {
+    if (handle) this._handles.get(physicalId); // Just a check
+    this._handles.set(physicalId, handle);
   }
 
-  public registerContent(el: HTMLElement | null): void {
-    this._content = el;
+  public registerPhysicalSlots(physicalId: number, elements: (HTMLElement | null)[]): void {
+    this._contentSlots.set(physicalId, elements);
   }
 
-  public getContent(): HTMLElement | null {
-    return this._content;
-  }
-
-  // --- Rows (Wrappers & Handles) ---
-
-  public registerWrapper(slotIndex: number, el: HTMLElement | null): void {
-    if (el) {
-      this._wrappers.set(slotIndex, el);
-    } else {
-      this._wrappers.delete(slotIndex);
+  public registerPhysicalComponent(physicalId: number, name: string, el: HTMLElement): void {
+    if (!this._physicalComponents.has(physicalId)) {
+      this._physicalComponents.set(physicalId, new Map());
     }
+    this._physicalComponents.get(physicalId)!.set(name, el);
   }
 
-  public getWrapper(slotIndex: number): HTMLElement | undefined {
-    return this._wrappers.get(slotIndex);
+  // --- Logical Mapping (Called by ChatRow on doUpdate) ---
+  public linkLogicalToPhysical(logicalIndex: number, physicalId: number): void {
+    this._logicalToPhysical.set(logicalIndex, physicalId);
   }
 
-  public registerHandle(slotIndex: number, handle: any): void {
-    if (handle) {
-      this._handles.set(slotIndex, handle);
-    } else {
-      this._handles.delete(slotIndex);
+  public unlinkLogical(logicalIndex: number): void {
+    this._logicalToPhysical.delete(logicalIndex);
+  }
+
+  // --- Retrieval API ---
+  public getHandle(physicalId: number): any | undefined {
+    return this._handles.get(physicalId);
+  }
+
+  public getHandleByLogical(logicalIndex: number): any | undefined {
+    const pId = this._logicalToPhysical.get(logicalIndex);
+    return pId !== undefined ? this._handles.get(pId) : undefined;
+  }
+
+  public getContentSlot(logicalIndex: number, partIdx: number = 0): HTMLElement | null | undefined {
+    const pId = this._logicalToPhysical.get(logicalIndex);
+    if (pId !== undefined) {
+      return this._contentSlots.get(pId)?.[partIdx];
     }
+    return undefined;
   }
 
-  public getHandle(slotIndex: number): any | undefined {
-    return this._handles.get(slotIndex);
+  public getComponent(logicalIndex: number, name: string): HTMLElement | undefined {
+    const pId = this._logicalToPhysical.get(logicalIndex);
+    if (pId !== undefined) {
+      return this._physicalComponents.get(pId)?.get(name);
+    }
+    return undefined;
   }
 
-  // --- Legacy Row Registration (By Data Index) ---
-
-  public registerRow(index: number, el: HTMLElement, handle?: any): void {
-    this._rows.set(index, { el, handle });
-  }
-
-  public unregisterRow(index: number): void {
-    this._rows.delete(index);
-  }
-
-  public getRowElement(index: number): HTMLElement | undefined {
-    return this._rows.get(index)?.el;
-  }
-
-  public getRowHandle(index: number): any | undefined {
-    return this._rows.get(index)?.handle;
+  public getWrapper(physicalId: number): HTMLElement | undefined {
+    return this._wrappers.get(physicalId);
   }
 
   public override onDestroy(): void {
@@ -86,6 +91,8 @@ export class DOMRegisterModule extends BaseModule<any, ChatEvent> {
     this._content = null;
     this._wrappers.clear();
     this._handles.clear();
-    this._rows.clear();
+    this._contentSlots.clear();
+    this._physicalComponents.clear();
+    this._logicalToPhysical.clear();
   }
 }
