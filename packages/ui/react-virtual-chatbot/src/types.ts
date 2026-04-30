@@ -117,7 +117,6 @@ export interface ReactVirtualChatbotHandle<T = any> {
   // New Store-based methods
   sendMessage: (text: string) => void;
   stopStreaming: () => void;
-  setApiKey: (key: string) => void;
   setSelectedModel: (id: string) => void;
   readonly state: any;
   readonly store: any;

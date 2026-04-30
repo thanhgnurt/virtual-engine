@@ -12,7 +12,7 @@ import { EngineSlot } from "./components/EngineSlot";
 import { TypingIndicator } from "./components/TypingIndicator";
 import { ChatStore } from "./store";
 import { ChatProvider } from "./store/ChatContext";
-import { ChatEvent } from "./store/types";
+import { ChatEvent, ChatState } from "./store/types";
 import {
   ChatMessage,
   ReactVirtualChatbotHandle,
@@ -23,7 +23,7 @@ import {
 // Main Component
 // ─────────────────────────────────────────────
 
-const POOL_SIZE = 40;
+const POOL_SIZE = 24;
 
 /**
  * Extended Props for the "Black Box" Chatbot
@@ -33,9 +33,8 @@ export interface EnhancedChatbotProps extends Partial<
 > {
   worker?: Worker;
   fallbackFetcher?: any;
-  apiKey?: string;
   selectedModelId?: string;
-  onStateChange?: (state: any) => void;
+  onStateChange?: (state: ChatState) => void;
   history?: ChatMessage[];
 }
 
@@ -55,7 +54,6 @@ const ReactVirtualChatbotInner = (
     codeHighlighting = true,
     worker,
     fallbackFetcher,
-    apiKey,
     selectedModelId,
     onStateChange,
     history: initialHistory,
@@ -68,17 +66,12 @@ const ReactVirtualChatbotInner = (
         worker,
         fallbackFetcher,
         initialState: {
-          apiKey,
           selectedModelId,
           history: initialHistory || [],
         },
       }),
   );
 
-  // Sync props to store
-  useEffect(() => {
-    if (apiKey) store.setApiKey(apiKey);
-  }, [apiKey, store]);
   useEffect(() => {
     if (selectedModelId) store.setSelectedModel(selectedModelId);
   }, [selectedModelId, store]);
@@ -159,7 +152,6 @@ const ReactVirtualChatbotInner = (
 
     sendMessage: (text: string) => store.sendMessage(text),
     stopStreaming: () => store.workerModule.stopStream(),
-    setApiKey: (key: string) => store.setApiKey(key),
     setSelectedModel: (id: string) => store.setSelectedModel(id),
 
     scrollToBottom: () => store.scrollModule.scrollToBottom(),
@@ -169,15 +161,14 @@ const ReactVirtualChatbotInner = (
       ),
 
     // Legacy methods for backward compatibility
-    appendItems: (newItems) =>
-      store.historyModule.appendMessages(newItems as any),
+    appendItems: (newItems) => store.historyModule.appendMessages(newItems),
     patchMetadata: (index, patch) =>
       store.historyModule.updateMessageMetadata(index, patch),
     updateMessageText: (index, text) =>
       store.emit(ChatEvent.MESSAGE_UPDATED, index, text),
     updateItem: (index, newItem) => {
       const next = [...store.state.history];
-      next[index] = newItem as any;
+      next[index] = newItem;
       store.historyModule.setHistory(next);
     },
     getTotalCount: () => store.historyModule.getCount(),
@@ -219,8 +210,8 @@ const ReactVirtualChatbotInner = (
             }}
             initialIndex={-1}
             initialData={null}
-            renderItem={(item: any, index: number) => {
-              if (renderItem) return renderItem(item, index);
+            renderItem={(item: ChatMessage | null, index: number) => {
+              if (renderItem) return renderItem(item as any, index);
               return DefaultChatRenderer(item, index, codeHighlighting);
             }}
           />
@@ -266,5 +257,12 @@ const ReactVirtualChatbotInner = (
   );
 };
 
-export const ReactVirtualChatbot = forwardRef(ReactVirtualChatbotInner) as any;
+export const ReactVirtualChatbot = forwardRef(ReactVirtualChatbotInner) as (<
+  T = ChatMessage,
+>(
+  props: EnhancedChatbotProps & {
+    ref?: React.Ref<ReactVirtualChatbotHandle<T>>;
+  },
+) => React.ReactElement) & { displayName: string };
+
 ReactVirtualChatbot.displayName = "ReactVirtualChatbot";

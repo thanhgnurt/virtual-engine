@@ -41,48 +41,111 @@ const MOCK_MESSAGES: ChatMessage[] = Array.from({ length: 50 }).map((_, i) => {
   const role = isUser ? "user" : "assistant";
   const id = `msg_${i + 1}`;
   const prefix = `[Row #${i}] `;
-  
+
   // Custom logic for the first few messages to set the stage
-  if (i === 0) return { id, role, content: prefix + "Chào AI! Bạn hỗ trợ những gì?" };
-  if (i === 1) return { id, role, content: prefix + "Chào bạn! Tôi có thể giúp bạn viết code, giải thích kỹ thuật và hiển thị hình ảnh." };
-  if (i === 2) return { id, role, content: prefix + "Tuyệt! Cho mình xem một đoạn code Rust tính Fibonacci và một hình ảnh đẹp nhé." };
-  if (i === 3) return { 
-    id, role, 
-    content: prefix + "Tất nhiên! Đây là ví dụ về Rust:\n\n```rust\nfn fib(n: u32) -> u32 {\n    if n <= 1 { return n; }\n    fib(n - 1) + fib(n - 2)\n}\n```",
-    metadata: { url: `https://picsum.photos/seed/${i}/1200/600`, aspectRatio: "2" }
-  };
+  if (i === 0)
+    return { id, role, content: prefix + "Chào AI! Bạn hỗ trợ những gì?" };
+  if (i === 1)
+    return {
+      id,
+      role,
+      content:
+        prefix +
+        "Chào bạn! Tôi có thể giúp bạn viết code, giải thích kỹ thuật và hiển thị hình ảnh.",
+    };
+  if (i === 2)
+    return {
+      id,
+      role,
+      content:
+        prefix +
+        "Tuyệt! Cho mình xem một đoạn code Rust tính Fibonacci và một hình ảnh đẹp nhé.",
+    };
+  if (i === 3)
+    return {
+      id,
+      role,
+      content:
+        prefix +
+        "Tất nhiên! Đây là ví dụ về Rust:\n\n```rust\nfn fib(n: u32) -> u32 {\n    if n <= 1 { return n; }\n    fib(n - 1) + fib(n - 2)\n}\n```",
+      metadata: {
+        url: `https://picsum.photos/seed/${i}/1200/600`,
+        aspectRatio: "2",
+      },
+    };
 
   // General alternating variety for the rest
   if (isUser) {
-    if (i % 6 === 0) return { id, role, content: prefix + "Giải thích cho mình thêm về Physical DOM Pool đi." };
-    if (i % 4 === 0) return { id, role, content: prefix + "Cho mình thêm một vài ví dụ về hình ảnh nữa." };
-    return { id, role, content: prefix + (i % 3 === 0 ? "Bạn thấy hệ thống này thế nào?" : "Ok, tiếp tục đi.") };
+    if (i % 6 === 0)
+      return {
+        id,
+        role,
+        content: prefix + "Giải thích cho mình thêm về Physical DOM Pool đi.",
+      };
+    if (i % 4 === 0)
+      return {
+        id,
+        role,
+        content: prefix + "Cho mình thêm một vài ví dụ về hình ảnh nữa.",
+      };
+    return {
+      id,
+      role,
+      content:
+        prefix +
+        (i % 3 === 0 ? "Bạn thấy hệ thống này thế nào?" : "Ok, tiếp tục đi."),
+    };
   } else {
     // Explicit image messages
-    if (i === 11) return {
-      id, role,
-      content: prefix + "Tôi tìm thấy một hình ảnh tuyệt đẹp cho bạn đây:",
-      metadata: { url: `https://picsum.photos/seed/${i + 500}/1000/500`, aspectRatio: "2" }
-    };
-    if (i === 25) return {
-      id, role,
-      content: prefix + "Một góc nhìn khác để bạn tham khảo layout:",
-      metadata: { url: `https://picsum.photos/seed/${i + 700}/800/600`, aspectRatio: "1.33" }
-    };
-    if (i === 37) return {
-      id, role,
-      content: prefix + "Đây là một hình ảnh minh họa cho layout dọc (Portrait):",
-      metadata: { url: `https://picsum.photos/seed/${i + 800}/500/800`, aspectRatio: "0.625" }
-    };
+    if (i === 11)
+      return {
+        id,
+        role,
+        content: prefix + "Tôi tìm thấy một hình ảnh tuyệt đẹp cho bạn đây:",
+        metadata: {
+          url: `https://picsum.photos/seed/${i + 500}/1000/500`,
+          aspectRatio: "2",
+        },
+      };
+    if (i === 25)
+      return {
+        id,
+        role,
+        content: prefix + "Một góc nhìn khác để bạn tham khảo layout:",
+        metadata: {
+          url: `https://picsum.photos/seed/${i + 700}/800/600`,
+          aspectRatio: "1.33",
+        },
+      };
+    if (i === 37)
+      return {
+        id,
+        role,
+        content:
+          prefix + "Đây là một hình ảnh minh họa cho layout dọc (Portrait):",
+        metadata: {
+          url: `https://picsum.photos/seed/${i + 800}/500/800`,
+          aspectRatio: "0.625",
+        },
+      };
 
     // General text/code messages
-    if (i % 5 === 1) return {
-      id, role,
-      content: prefix + "Để tối ưu hóa hiệu năng, tôi đề xuất sử dụng TypeScript với các interface chặt chẽ. Đây là ví dụ về một Generic Repository pattern:\n\n```typescript\ninterface IRepository<T> {\n  getAll(): Promise<T[]>;\n  getById(id: string): Promise<T | null>;\n  create(item: T): Promise<void>;\n}\n\nclass BaseRepository<T> implements IRepository<T> {\n  private items: T[] = [];\n  async getAll() { return this.items; }\n  async getById(id: string) { return null; }\n  async create(item: T) { this.items.push(item); }\n}\n```"
-    };
-    return { 
-      id, role, 
-      content: prefix + (i % 4 === 1 ? "Đừng quên SQL để quản lý dữ liệu. Đây là một câu query phức tạp:\n\n```sql\nSELECT u.name, COUNT(o.id) as total_orders\nFROM users u\nJOIN orders o ON u.id = o.user_id\nWHERE o.status = 'completed'\nGROUP BY u.name\nHAVING COUNT(o.id) > 5\nORDER BY total_orders DESC;\n```" : "Đây là một đoạn code Python khác cho bạn:\n\n```python\nimport math\ndef calculate_circle_area(radius):\n    return math.pi * (radius ** 2)\nprint(f'Area: {calculate_circle_area(5)}')\n```")
+    if (i % 5 === 1)
+      return {
+        id,
+        role,
+        content:
+          prefix +
+          "Để tối ưu hóa hiệu năng, tôi đề xuất sử dụng TypeScript với các interface chặt chẽ. Đây là ví dụ về một Generic Repository pattern:\n\n```typescript\ninterface IRepository<T> {\n  getAll(): Promise<T[]>;\n  getById(id: string): Promise<T | null>;\n  create(item: T): Promise<void>;\n}\n\nclass BaseRepository<T> implements IRepository<T> {\n  private items: T[] = [];\n  async getAll() { return this.items; }\n  async getById(id: string) { return null; }\n  async create(item: T) { this.items.push(item); }\n}\n```",
+      };
+    return {
+      id,
+      role,
+      content:
+        prefix +
+        (i % 4 === 1
+          ? "Đừng quên SQL để quản lý dữ liệu. Đây là một câu query phức tạp:\n\n```sql\nSELECT u.name, COUNT(o.id) as total_orders\nFROM users u\nJOIN orders o ON u.id = o.user_id\nWHERE o.status = 'completed'\nGROUP BY u.name\nHAVING COUNT(o.id) > 5\nORDER BY total_orders DESC;\n```"
+          : "Đây là một đoạn code Python khác cho bạn:\n\n```python\nimport math\ndef calculate_circle_area(radius):\n    return math.pi * (radius ** 2)\nprint(f'Area: {calculate_circle_area(5)}')\n```"),
     };
   }
 });
@@ -108,7 +171,7 @@ function App() {
         {
           method: "POST",
           headers: {
-            Authorization: `Bearer ${params.apiKey}`,
+            Authorization: `Bearer ${apiKey}`,
             "Content-Type": "application/json",
             "HTTP-Referer": window.location.origin,
             "X-Title": "Virtual Chatbot",
@@ -227,7 +290,7 @@ function App() {
                 value={apiKey}
                 onChange={(e) => {
                   setApiKey(e.target.value);
-                  chatbotRef.current?.setApiKey(e.target.value);
+                  // chatbotRef.current?.setApiKey(e.target.value);
                 }}
                 className="api-key-input"
               />
@@ -241,7 +304,6 @@ function App() {
         <main className="gemini-main">
           <ReactVirtualChatbot
             ref={chatbotRef}
-            apiKey={apiKey}
             fallbackFetcher={fallbackFetcher}
             onStateChange={(state: any) => setChatState(state)}
             followOutput={true}

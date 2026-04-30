@@ -27,7 +27,6 @@ export interface ChatState {
   history: ChatMessage[];
   isStreaming: boolean;
   selectedModelId: string;
-  apiKey: string;
   pendingFile: {
     file: File;
     preview: string;

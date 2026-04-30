@@ -45,7 +45,6 @@ export class ChatStore extends BaseStore<ChatState, ChatEvent> {
       history: [],
       isStreaming: false,
       selectedModelId: "google/gemini-2.0-pro-exp-02-05:free",
-      apiKey: "",
       pendingFile: null,
       ...options.initialState,
     };
@@ -115,7 +114,6 @@ export class ChatStore extends BaseStore<ChatState, ChatEvent> {
       await this.workerModule.startStream(aiIdx, {
         messages,
         modelId: this.state.selectedModelId,
-        apiKey: this.state.apiKey,
       });
 
       // 4. Finalize
@@ -127,13 +125,7 @@ export class ChatStore extends BaseStore<ChatState, ChatEvent> {
     }
   }
 
-  /**
-   * Updates the API key in the store
-   */
-  public setApiKey(key: string) {
-    this._state.apiKey = key;
-    this.emit(ChatEvent.CONFIG_CHANGED);
-  }
+
 
   /**
    * Updates the selected model
