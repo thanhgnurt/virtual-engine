@@ -16,8 +16,9 @@ export class DOMRegisterModule extends BaseModule<any, ChatEvent> {
   private _contentSlots = new Map<number, (HTMLElement | null)[]>();
   private _physicalComponents = new Map<number, Map<string, HTMLElement>>();
 
-  // --- Logical Mapping (logicalIndex -> physicalId) ---
+  // --- Logical Mapping (logicalIndex <-> physicalId) ---
   private _logicalToPhysical = new Map<number, number>();
+  private _physicalToLogical = new Map<number, number>();
 
   // --- Container & Content ---
   public registerContainer(el: HTMLElement | null): void { this._container = el; }
@@ -47,12 +48,33 @@ export class DOMRegisterModule extends BaseModule<any, ChatEvent> {
     this._physicalComponents.get(physicalId)!.set(name, el);
   }
 
-  // --- Logical Mapping (Called by ChatRow on doUpdate) ---
-  public linkLogicalToPhysical(logicalIndex: number, physicalId: number): void {
+  // --- Unified Mapping (Called by ChatRow on doUpdate) ---
+  /**
+   * Links a logical message index to a physical row slot.
+   * Automatically unlinks the previous message that was using this physical slot.
+   */
+  public linkMessageToRow(logicalIndex: number, physicalId: number): void {
+    // 1. Find who was previously using this physical room
+    const prevLogicalIndex = this._physicalToLogical.get(physicalId);
+    
+    // 2. If someone else was there, kick them out (unlink)
+    if (prevLogicalIndex !== undefined && prevLogicalIndex !== logicalIndex) {
+      this._logicalToPhysical.delete(prevLogicalIndex);
+    }
+    
+    // 3. Register the new guest
     this._logicalToPhysical.set(logicalIndex, physicalId);
+    this._physicalToLogical.set(physicalId, logicalIndex);
   }
 
+  /**
+   * Explicitly remove a logical index from all mappings.
+   */
   public unlinkLogical(logicalIndex: number): void {
+    const pId = this._logicalToPhysical.get(logicalIndex);
+    if (pId !== undefined) {
+      this._physicalToLogical.delete(pId);
+    }
     this._logicalToPhysical.delete(logicalIndex);
   }
 
@@ -94,5 +116,6 @@ export class DOMRegisterModule extends BaseModule<any, ChatEvent> {
     this._contentSlots.clear();
     this._physicalComponents.clear();
     this._logicalToPhysical.clear();
+    this._physicalToLogical.clear();
   }
 }

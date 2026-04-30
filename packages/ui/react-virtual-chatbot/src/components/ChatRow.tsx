@@ -54,12 +54,7 @@ export const ChatRow = memo(
     const doUpdate = (item: ChatMessage | null, newIndex?: number) => {
       if (!item || !containerRef.current) return;
 
-      // --- 0. Cleanup Old Mapping ---
-      const oldIndex = currentIndexRef.current;
-      if (oldIndex >= 0) {
-        store.dom.unlinkLogical(oldIndex);
-      }
-
+      // --- 0. Metadata Update ---
       currentItemRef.current = item;
       if (typeof newIndex === "number") {
         currentIndexRef.current = newIndex;
@@ -170,9 +165,9 @@ export const ChatRow = memo(
       // --- 4. Registry Update ---
       const activeIndex = currentIndexRef.current;
       if (activeIndex >= 0) {
-        // Level 1: Register Row Mapping
+        // Level 1: Register Row Mapping (Automatic unlink/link)
         if (typeof physicalId === "number") {
-          store.dom.linkLogicalToPhysical(activeIndex, physicalId);
+          store.dom.linkMessageToRow(activeIndex, physicalId);
         }
 
         // FORCE MEASUREMENT: ResizeObserver ignores changes if a recycled slot happens to have the same height.
@@ -236,11 +231,7 @@ export const ChatRow = memo(
         // 2. Register UI components (Dots, etc.)
         const dotsEl = prefixRef.current?.getDotsElement();
         if (dotsEl) {
-          store.dom.registerPhysicalComponent(
-            physicalId,
-            "dots",
-            dotsEl,
-          );
+          store.dom.registerPhysicalComponent(physicalId, "dots", dotsEl);
         }
       }
     }, [physicalId, slotCount]);
