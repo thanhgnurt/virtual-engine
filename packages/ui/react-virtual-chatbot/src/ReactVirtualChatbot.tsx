@@ -7,6 +7,7 @@ import React, {
   useMemo,
   useRef,
 } from "react";
+import { TypingIndicator } from "./components/TypingIndicator";
 import { GeminiSparkle } from "./components/GeminiSparkle";
 import { UniversalChatRow } from "./components/UniversalChatRow";
 import { ChatStore } from "./store";
@@ -143,7 +144,6 @@ const ReactVirtualChatbotInner = (
   // 2. DOM Refs
   const containerRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
-  const typingRef = useRef<HTMLDivElement>(null);
   const bufferHeightRef = useRef(0);
   const viewHRef = useRef(600);
 
@@ -310,10 +310,7 @@ const ReactVirtualChatbotInner = (
       if (content && engine)
         content.style.height = `${engine.getTotalHeight() + h}px`;
     },
-    setTyping: (isVisible: boolean) => {
-      if (typingRef.current)
-        typingRef.current.style.display = isVisible ? "flex" : "none";
-    },
+    setTyping: (isVisible: boolean) => store.uiStatusModule.setTyping(isVisible),
   }));
 
   const nodePool = useMemo(() => {
@@ -383,33 +380,7 @@ const ReactVirtualChatbotInner = (
           }}
         >
           {nodePool}
-          <div
-            ref={typingRef}
-            className="typing-indicator-container"
-            style={{
-              display: "none",
-              position: "absolute",
-              top: 0,
-              left: 0,
-              zIndex: 10,
-              pointerEvents: "none",
-            }}
-          >
-            <div className="typing-indicator-content">
-              {renderTypingIndicator ? (
-                renderTypingIndicator()
-              ) : (
-                <div className="ai-message-prefix">
-                  <GeminiSparkle isLoading={true} />
-                  <div className="gemini-typing-dots">
-                    <span></span>
-                    <span></span>
-                    <span></span>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
+          <TypingIndicator renderCustom={renderTypingIndicator} />
         </div>
       </div>
     </ChatProvider>

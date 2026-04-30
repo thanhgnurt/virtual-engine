@@ -11,6 +11,7 @@ import { ResizeModule } from "./modules/ui/ResizeModule";
 import { SyncModule } from "./modules/ui/SyncModule";
 import { VirtualModule } from "./modules/ui/VirtualModule";
 import { ScrollModule } from "./modules/ui/ScrollModule";
+import { UIStatusModule } from "./modules/ui/UIStatusModule";
 import { ChatEvent, ChatState } from "./types";
 
 export interface ChatStoreOptions {
@@ -35,6 +36,7 @@ export class ChatStore extends BaseStore<ChatState, ChatEvent> {
   public virtualModule!: VirtualModule;
   public resizeModule!: ResizeModule;
   public scrollModule!: ScrollModule;
+  public uiStatusModule!: UIStatusModule;
 
   constructor(options: ChatStoreOptions = {}) {
     const defaultState: ChatState = {
@@ -74,6 +76,7 @@ export class ChatStore extends BaseStore<ChatState, ChatEvent> {
     this.virtualModule = this.registerModule(new VirtualModule());
     this.resizeModule = this.registerModule(new ResizeModule());
     this.scrollModule = this.registerModule(new ScrollModule());
+    this.uiStatusModule = this.registerModule(new UIStatusModule());
   }
 
   /**
